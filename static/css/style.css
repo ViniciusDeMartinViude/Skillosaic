@@ -106,27 +106,16 @@ main {
 /* Hero */
 .hero {
     text-align: center;
-    padding: 1.2rem 2rem 1rem;
+    padding: 0.9rem 2rem;
     background: var(--surface);
     border-bottom: 1px solid var(--border);
     flex-shrink: 0;
 }
 
-.hero h1 {
-    font-size: 2.2rem;
-    font-weight: 700;
-    margin-bottom: 0.6rem;
-    color: var(--primary);
-}
-
-.highlight {
-    color: var(--accent3);
-    -webkit-text-fill-color: var(--accent3);
-}
-
 .subtitle {
-    color: var(--muted);
-    font-size: 1.05rem;
+    color: var(--primary);
+    font-size: 1.15rem;
+    font-weight: 600;
 }
 
 /* Workspace */
