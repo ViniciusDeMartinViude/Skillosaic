@@ -12,8 +12,7 @@
             <img src="static/images/logo_color.svg" alt="Emirates Skills" class="navbar-logo" />
             <ul>
                 <li><a href="#">Home</a></li>
-                <li><a href="#">About</a></li>
-                <li><a href="#">Contact</a></li>
+                <li><a href="#" id="about-link">About</a></li>
             </ul>
         </nav>
     </header>
@@ -102,6 +101,66 @@
     <footer>
         <p>&copy; 2026 Emirates Skills. All rights reserved.</p>
     </footer>
+
+    <!-- About modal -->
+    <div class="modal-overlay" id="modal-overlay" hidden>
+        <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+            <button class="modal-close" id="modal-close" aria-label="Close">&times;</button>
+            <h2 id="modal-title">How it works</h2>
+
+            <ol class="how-list">
+                <li>
+                    <div class="how-step-icon">1</div>
+                    <div>
+                        <strong>Upload an image</strong>
+                        <p>Drop or select any photo. It is read entirely in your browser — nothing is uploaded to a server.</p>
+                    </div>
+                </li>
+                <li>
+                    <div class="how-step-icon">2</div>
+                    <div>
+                        <strong>Convert to LAB colour space</strong>
+                        <p>Each pixel is converted from sRGB → XYZ → L*a*b*. LAB separates lightness (L) from colour information (a, b), making clustering perceptually uniform.</p>
+                    </div>
+                </li>
+                <li>
+                    <div class="how-step-icon">3</div>
+                    <div>
+                        <strong>Isolate black &amp; white</strong>
+                        <p>Pixels with L below the <em>Black</em> threshold or above the <em>White</em> threshold are pre-assigned to dedicated clusters before clustering begins.</p>
+                    </div>
+                </li>
+                <li>
+                    <div class="how-step-icon">4</div>
+                    <div>
+                        <strong>K-Means on a &amp; b channels</strong>
+                        <p>The remaining pixels are clustered using K-Means++ (K = 5) applied only to the a and b channels. Lightness is intentionally ignored so colour grouping is independent of brightness.</p>
+                    </div>
+                </li>
+                <li>
+                    <div class="how-step-icon">5</div>
+                    <div>
+                        <strong>Reconstruct the mosaic</strong>
+                        <p>Each pixel keeps its original L value but its a and b are replaced by its cluster centroid. The result is converted back to sRGB and displayed.</p>
+                    </div>
+                </li>
+                <li>
+                    <div class="how-step-icon">6</div>
+                    <div>
+                        <strong>Palette, contours &amp; smoothing</strong>
+                        <p>Click palette swatches to isolate specific colour groups. Toggle <em>Contours</em> to see only cluster boundaries. Use the <em>Smoothing</em> slider to merge small regions via a mode filter.</p>
+                    </div>
+                </li>
+                <li>
+                    <div class="how-step-icon">7</div>
+                    <div>
+                        <strong>Export</strong>
+                        <p>Download the result as a PDF with one click — generated entirely client-side using jsPDF.</p>
+                    </div>
+                </li>
+            </ol>
+        </div>
+    </div>
 
     <script src="static/js/jspdf.umd.min.js"></script>
     <script src="static/js/main.js"></script>

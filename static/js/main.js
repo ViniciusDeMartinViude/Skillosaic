@@ -1,3 +1,17 @@
+// ── About modal ───────────────────────────────────────────────────────────────
+const modalOverlay = document.getElementById('modal-overlay');
+const modalClose   = document.getElementById('modal-close');
+const aboutLink    = document.getElementById('about-link');
+
+function openModal()  { modalOverlay.hidden = false; document.body.style.overflow = 'hidden'; }
+function closeModal() { modalOverlay.hidden = true;  document.body.style.overflow = ''; }
+
+aboutLink.addEventListener('click', e => { e.preventDefault(); openModal(); });
+modalClose.addEventListener('click', closeModal);
+modalOverlay.addEventListener('click', e => { if (e.target === modalOverlay) closeModal(); });
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
+
+// ── Image loading ─────────────────────────────────────────────────────────────
 const fileInput = document.getElementById('file-input');
 const uploadArea = document.getElementById('upload-area');
 const previewImg  = document.getElementById('preview-img');
@@ -478,8 +492,6 @@ runBtn.addEventListener('click', () => {
         exportBtn.disabled = false;
     });
 });
-
-// ── Image loading ─────────────────────────────────────────────────────────────
 
 function loadImage(file) {
     if (!file || !file.type.startsWith('image/')) return;
