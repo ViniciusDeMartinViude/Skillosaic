@@ -73,10 +73,17 @@
                     <button class="btn-action btn-export" id="export-btn" disabled>Export PDF</button>
                     <button class="btn-action" id="contour-btn" disabled>Contours</button>
                 </div>
-                <div class="smooth-row">
-                    <label for="smooth-radius">Smoothing</label>
-                    <input type="range" id="smooth-radius" min="0" max="10" value="0" step="1" />
-                    <span id="smooth-value">0</span>
+                <div class="smooth-panel">
+                    <div class="smooth-row">
+                        <label for="smooth-radius">Smoothing</label>
+                        <input type="range" id="smooth-radius" min="0" max="10" value="0" step="1" />
+                        <span id="smooth-value">0</span>
+                    </div>
+                    <div class="smooth-row">
+                        <label for="contour-thickness">Line thickness</label>
+                        <input type="range" id="contour-thickness" min="1" max="8" value="1" step="1" />
+                        <span id="contour-thickness-value">1</span>
+                    </div>
                 </div>
                 <div class="image-area" id="result-area">
                     <div class="placeholder">

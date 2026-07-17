@@ -20,6 +20,8 @@ const contourBtn     = document.getElementById('contour-btn');
 const exportBtn      = document.getElementById('export-btn');
 const smoothRadius   = document.getElementById('smooth-radius');
 const smoothValue    = document.getElementById('smooth-value');
+const contourThickness = document.getElementById('contour-thickness');
+const contourThicknessValue = document.getElementById('contour-thickness-value');
 const blackThreshold = document.getElementById('black-threshold');
 const blackValue     = document.getElementById('black-value');
 const whiteThreshold = document.getElementById('white-threshold');
@@ -332,13 +334,14 @@ function smoothLabels(labels, width, height, radius) {
 
 let contourMode = false;
 
-function renderContours(labData, labels, centroids, activeSet) {
+function renderContours(labData, labels, centroids, activeSet, thickness) {
     const { width, height } = labData;
     const canvas = document.createElement('canvas');
     canvas.width = width; canvas.height = height;
     const ctx = canvas.getContext('2d');
     const out = ctx.createImageData(width, height);
     const all = !activeSet || activeSet.size === 0;
+    const r = Math.max(0, (thickness || 1) - 1);
 
     for (let y = 0; y < height; y++) {
         for (let x = 0; x < width; x++) {
@@ -353,13 +356,20 @@ function renderContours(labData, labels, centroids, activeSet) {
                 continue;
             }
 
-            // Check 4-connected neighbours for a different cluster
-            const isBoundary = (
-                (x > 0          && labels[i - 1] !== cluster) ||
-                (x < width - 1  && labels[i + 1] !== cluster) ||
-                (y > 0          && labels[i - width] !== cluster) ||
-                (y < height - 1 && labels[i + width] !== cluster)
-            );
+            // Check neighbours within `thickness` radius for a different cluster
+            let isBoundary = false;
+            for (let dy = -r; dy <= r && !isBoundary; dy++) {
+                const ny = y + dy;
+                if (ny < 0 || ny >= height) continue;
+                for (let dx = -r; dx <= r; dx++) {
+                    const nx = x + dx;
+                    if (nx < 0 || nx >= width) continue;
+                    if (labels[ny * width + nx] !== cluster) {
+                        isBoundary = true;
+                        break;
+                    }
+                }
+            }
 
             if (isBoundary) {
                 const L = labData.pixels[i * 3];
@@ -387,8 +397,9 @@ function refreshResult() {
     const { width, height } = currentLabData;
     const radius = parseInt(smoothRadius.value, 10);
     const finalLabels = smoothLabels(labels, width, height, radius);
+    const thickness = parseInt(contourThickness.value, 10);
     const dataUrl = contourMode
-        ? renderContours(currentLabData, finalLabels, centroids, selectedClusters)
+        ? renderContours(currentLabData, finalLabels, centroids, selectedClusters, thickness)
         : renderMosaic(currentLabData, finalLabels, centroids, selectedClusters);
     resultImg.src = dataUrl;
     resultImg.hidden = false;
@@ -397,6 +408,11 @@ function refreshResult() {
 
 smoothRadius.addEventListener('input', () => {
     smoothValue.textContent = smoothRadius.value;
+    refreshResult();
+});
+
+contourThickness.addEventListener('input', () => {
+    contourThicknessValue.textContent = contourThickness.value;
     refreshResult();
 });
 
