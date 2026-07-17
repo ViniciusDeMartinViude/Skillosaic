@@ -11,21 +11,21 @@ modalClose.addEventListener('click', closeModal);
 modalOverlay.addEventListener('click', e => { if (e.target === modalOverlay) closeModal(); });
 document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
 
-// ── Image loading ─────────────────────────────────────────────────────────────
-const fileInput = document.getElementById('file-input');
-const uploadArea = document.getElementById('upload-area');
-const previewImg  = document.getElementById('preview-img');
-const resultArea  = document.getElementById('result-area');
-const resultImg   = document.getElementById('result-img');
-const runBtn        = document.getElementById('run-btn');
-const contourBtn    = document.getElementById('contour-btn');
-const exportBtn     = document.getElementById('export-btn');
+const fileInput      = document.getElementById('file-input');
+const uploadArea     = document.getElementById('upload-area');
+const previewImg     = document.getElementById('preview-img');
+const resultArea     = document.getElementById('result-area');
+const resultImg      = document.getElementById('result-img');
+const contourBtn     = document.getElementById('contour-btn');
+const exportBtn      = document.getElementById('export-btn');
 const smoothRadius   = document.getElementById('smooth-radius');
 const smoothValue    = document.getElementById('smooth-value');
 const blackThreshold = document.getElementById('black-threshold');
 const blackValue     = document.getElementById('black-value');
 const whiteThreshold = document.getElementById('white-threshold');
 const whiteValue     = document.getElementById('white-value');
+const loadingOverlay = document.getElementById('loading-overlay');
+const loadingLabel   = document.getElementById('loading-label');
 
 // ── sRGB ↔ LAB conversion ─────────────────────────────────────────────────────
 
@@ -459,39 +459,35 @@ exportBtn.addEventListener('click', () => {
     }
 });
 
-// ── Generate handler ──────────────────────────────────────────────────────────
+// ── Processing ────────────────────────────────────────────────────────────────
 
-runBtn.addEventListener('click', () => {
-    // Prefer in-memory data; fall back to localStorage for cross-reload persistence
-    let labData = currentLabData;
-    if (!labData) {
-        const raw = localStorage.getItem('skillosaic_lab');
-        if (!raw) { alert('No image data found. Please upload an image first.'); return; }
-        labData = JSON.parse(raw);
-        labData.pixels = new Float32Array(labData.pixels);
-        currentLabData = labData;
-    }
+function runProcessing() {
+    const labData = currentLabData;
+    if (!labData) return;
 
-    runBtn.disabled = true;
-    runBtn.textContent = 'Running…';
+    // Show loading overlay
+    resultImg.hidden = true;
+    const placeholder = resultArea.querySelector('.placeholder');
+    if (placeholder) placeholder.style.display = 'none';
+    loadingOverlay.hidden = false;
+    contourBtn.disabled = true;
+    exportBtn.disabled = true;
+    contourBtn.classList.remove('active');
+    contourMode = false;
 
-    // Defer to next frame so the UI updates before the heavy computation
-    requestAnimationFrame(() => {
-
+    // Let the browser render the spinner before blocking computation
+    setTimeout(() => {
         const kmeansResult = runKmeans(labData);
         lastKmeansResult = kmeansResult;
-        contourMode = false;
-        contourBtn.classList.remove('active');
 
         renderPalette(kmeansResult.centroids, kmeansResult.avgL, kmeansResult.counts);
         refreshResult();
 
-        runBtn.textContent = 'Regenerate';
-        runBtn.disabled = false;
+        loadingOverlay.hidden = true;
         contourBtn.disabled = false;
         exportBtn.disabled = false;
-    });
-});
+    }, 50);
+}
 
 function loadImage(file) {
     if (!file || !file.type.startsWith('image/')) return;
@@ -500,17 +496,8 @@ function loadImage(file) {
         const labData = extractLabFromImage(previewImg);
         currentLabData = labData;
         saveLabToStorage(labData);
-        runBtn.disabled = false;
-        runBtn.textContent = 'Generate';
-        contourBtn.disabled = true;
-        contourBtn.classList.remove('active');
-        exportBtn.disabled = true;
-        contourMode = false;
         lastKmeansResult = null;
-        // Reset result panel
-        resultImg.hidden = true;
-        if (resultArea.querySelector('.placeholder'))
-            resultArea.querySelector('.placeholder').style.display = '';
+        runProcessing();
     };
     previewImg.src = url;
     previewImg.hidden = false;

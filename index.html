@@ -75,7 +75,6 @@
                     <span class="panel-label">Mosaic Result</span>
                     <button class="btn-action btn-export" id="export-btn" disabled>Export PDF</button>
                     <button class="btn-action" id="contour-btn" disabled>Contours</button>
-                    <button class="btn-action" id="run-btn" disabled>Generate</button>
                 </div>
                 <div class="smooth-row">
                     <label for="smooth-radius">Smoothing</label>
@@ -93,6 +92,10 @@
                         <p>Mosaic will appear here<br/>after you <strong>Generate</strong></p>
                     </div>
                     <img id="result-img" src="" alt="Mosaic result" hidden />
+                    <div class="loading-overlay" id="loading-overlay" hidden>
+                        <div class="spinner"></div>
+                        <span class="loading-label" id="loading-label">Processing…</span>
+                    </div>
                 </div>
             </div>
         </section>
