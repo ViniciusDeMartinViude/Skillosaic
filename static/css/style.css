@@ -10,11 +10,11 @@
     --accent2:  #FEE300;
     --accent3:  #0084AD;
     --accent4:  #005580;
-    --bg:       #001e3c;
-    --surface:  #002a56;
-    --border:   #004080;
-    --text:     #f0f4f8;
-    --muted:    #7aa3c8;
+    --bg:       #f4f6f9;
+    --surface:  #ffffff;
+    --border:   #d0d9e4;
+    --text:     #1a2a3a;
+    --muted:    #6b7f96;
 }
 
 body {
@@ -47,20 +47,14 @@ body::before {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 1rem 2.5rem;
+    padding: 0.75rem 2.5rem;
     background: var(--primary);
-    border-bottom: 1px solid var(--border);
+    border-bottom: none;
 }
 
-.logo {
-    font-size: 1.4rem;
-    font-weight: 800;
-    color: #fff;
-    letter-spacing: 0.02em;
-}
-
-.logo span {
-    color: var(--accent2);
+.navbar-logo {
+    height: 48px;
+    width: auto;
 }
 
 .navbar ul {
@@ -83,25 +77,26 @@ body::before {
 /* Hero */
 .hero {
     text-align: center;
-    padding: 3.5rem 2rem 2rem;
+    padding: 3rem 2rem 1.5rem;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
 }
 
 .hero h1 {
-    font-size: 2.4rem;
-    font-weight: 800;
-    margin-bottom: 0.75rem;
+    font-size: 2.2rem;
+    font-weight: 700;
+    margin-bottom: 0.6rem;
+    color: var(--primary);
 }
 
 .highlight {
-    background: linear-gradient(135deg, var(--accent3), var(--accent2));
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
+    color: var(--accent3);
+    -webkit-text-fill-color: var(--accent3);
 }
 
 .subtitle {
     color: var(--muted);
-    font-size: 1.1rem;
+    font-size: 1.05rem;
 }
 
 /* Workspace */
@@ -183,7 +178,7 @@ body::before {
 }
 
 .image-area {
-    background: var(--surface);
+    background: var(--bg);
     border: 2px dashed var(--border);
     border-radius: 14px;
     aspect-ratio: 4 / 3;
@@ -263,7 +258,7 @@ body::before {
 }
 
 .swatch.selected {
-    outline: 3px solid #fff;
+    outline: 3px solid var(--primary);
     outline-offset: 2px;
     transform: scaleX(1.18);
     z-index: 2;
@@ -371,6 +366,7 @@ footer {
     color: var(--muted);
     font-size: 0.85rem;
     border-top: 1px solid var(--border);
+    background: var(--surface);
 }
 
 /* Responsive */
