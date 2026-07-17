@@ -248,7 +248,7 @@ main {
     flex-shrink: 0;
     width: 72px;
     padding-top: 0;
-    min-height: 0;
+    align-self: flex-start;
 }
 
 .palette-swatches {
