@@ -32,32 +32,35 @@ body {
 }
 
 /* Top stripe — Emirates Skills identity bar */
+@property --stripe-angle {
+    syntax: '<angle>';
+    inherits: false;
+    initial-value: 90deg;
+}
+
 body::before {
     content: '';
     display: block;
     height: 5px;
-    background: linear-gradient(to right,
-        var(--primary)  0%   25%,
-        var(--accent3)  25%  50%,
-        var(--accent1)  50%  75%,
-        var(--accent2)  75%  100%
+    background: linear-gradient(var(--stripe-angle),
+        var(--primary),
+        var(--accent3),
+        var(--accent1),
+        var(--accent2),
+        var(--primary)
     );
-    background-size: 200% 100%;
+    background-size: 300% 100%;
     position: sticky;
     top: 0;
     z-index: 100;
-    box-shadow: 0 0 12px rgba(0, 132, 173, 0.55);
-    animation: stripe-glow 4s ease-in-out infinite;
+    box-shadow: 0 0 14px rgba(0, 132, 173, 0.6);
+    animation: stripe-glow 14s linear infinite;
 }
 
 @keyframes stripe-glow {
-    0%, 100% {
-        background-position: 0% 50%;
-        box-shadow: 0 0 6px rgba(0, 132, 173, 0.35);
-    }
-    50% {
+    to {
+        --stripe-angle: 450deg;
         background-position: 100% 50%;
-        box-shadow: 0 0 16px rgba(0, 132, 173, 0.75);
     }
 }
 
