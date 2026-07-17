@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Skillosaic</title>
+    <link rel="stylesheet" href="static/css/style.css" />
+</head>
+<body>
+    <header>
+        <nav class="navbar">
+            <span class="logo">Skillosaic</span>
+            <ul>
+                <li><a href="#">Home</a></li>
+                <li><a href="#">About</a></li>
+                <li><a href="#">Contact</a></li>
+            </ul>
+        </nav>
+    </header>
+
+    <main>
+        <section class="hero">
+            <h1>Turn any image into a <span class="highlight">mosaic</span></h1>
+            <p class="subtitle">Upload a photo and watch K-Means cluster your pixels into art.</p>
+        </section>
+
+        <section class="workspace">
+            <!-- Upload panel -->
+            <div class="image-panel" id="upload-panel">
+                <div class="panel-header">
+                    <span class="panel-label">Original Image</span>
+                    <label class="btn-upload" for="file-input">Choose file</label>
+                    <input type="file" id="file-input" accept="image/*" hidden />
+                </div>
+                <div class="image-area" id="upload-area">
+                    <div class="placeholder">
+                        <svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <rect x="8" y="14" width="48" height="36" rx="4" stroke="currentColor" stroke-width="2"/>
+                            <circle cx="22" cy="26" r="4" stroke="currentColor" stroke-width="2"/>
+                            <path d="M8 40 L20 28 L30 38 L40 30 L56 44" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
+                        </svg>
+                        <p>Drop an image here<br/>or click <strong>Choose file</strong></p>
+                    </div>
+                    <img id="preview-img" src="" alt="Original" hidden />
+                </div>
+                <div class="threshold-panel" id="threshold-panel">
+                    <div class="threshold-row">
+                        <span class="threshold-swatch black-swatch"></span>
+                        <label for="black-threshold">Black  L &lt;</label>
+                        <input type="range" id="black-threshold" min="0" max="50" value="15" step="1" />
+                        <span id="black-value">15</span>
+                    </div>
+                    <div class="threshold-row">
+                        <span class="threshold-swatch white-swatch"></span>
+                        <label for="white-threshold">White  L &gt;</label>
+                        <input type="range" id="white-threshold" min="50" max="100" value="90" step="1" />
+                        <span id="white-value">90</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Palette column -->
+            <div class="palette-column" id="palette-column">
+                <span class="panel-label">K-Means Palette</span>
+                <div class="palette-swatches" id="palette-swatches">
+                    <div class="swatch-empty">Run K-Means<br/>to see colors</div>
+                </div>
+                <svg class="palette-arrow" viewBox="0 0 16 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M8 0 V32 M2 26 L8 32 L14 26" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+            </div>
+
+            <!-- Result panel -->
+            <div class="image-panel" id="result-panel">
+                <div class="panel-header">
+                    <span class="panel-label">Mosaic Result</span>
+                    <button class="btn-action btn-export" id="export-btn" disabled>Export PDF</button>
+                    <button class="btn-action" id="contour-btn" disabled>Contours</button>
+                    <button class="btn-action" id="run-btn" disabled>Generate</button>
+                </div>
+                <div class="smooth-row">
+                    <label for="smooth-radius">Smoothing</label>
+                    <input type="range" id="smooth-radius" min="0" max="10" value="0" step="1" />
+                    <span id="smooth-value">0</span>
+                </div>
+                <div class="image-area" id="result-area">
+                    <div class="placeholder">
+                        <svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <rect x="8" y="8" width="22" height="22" rx="3" fill="var(--accent1)" opacity="0.6"/>
+                            <rect x="34" y="8" width="22" height="22" rx="3" fill="var(--accent2)" opacity="0.6"/>
+                            <rect x="8" y="34" width="22" height="22" rx="3" fill="var(--accent3)" opacity="0.6"/>
+                            <rect x="34" y="34" width="22" height="22" rx="3" fill="var(--primary)" opacity="0.6"/>
+                        </svg>
+                        <p>Mosaic will appear here<br/>after you <strong>Generate</strong></p>
+                    </div>
+                    <img id="result-img" src="" alt="Mosaic result" hidden />
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <p>&copy; 2026 Skillosaic. All rights reserved.</p>
+    </footer>
+
+    <script src="static/js/jspdf.umd.min.js"></script>
+    <script src="static/js/main.js"></script>
+</body>
+</html>
