@@ -42,9 +42,23 @@ body::before {
         var(--accent1)  50%  75%,
         var(--accent2)  75%  100%
     );
+    background-size: 200% 100%;
     position: sticky;
     top: 0;
     z-index: 100;
+    box-shadow: 0 0 12px rgba(0, 132, 173, 0.55);
+    animation: stripe-glow 4s ease-in-out infinite;
+}
+
+@keyframes stripe-glow {
+    0%, 100% {
+        background-position: 0% 50%;
+        box-shadow: 0 0 6px rgba(0, 132, 173, 0.35);
+    }
+    50% {
+        background-position: 100% 50%;
+        box-shadow: 0 0 16px rgba(0, 132, 173, 0.75);
+    }
 }
 
 /* Navbar */
