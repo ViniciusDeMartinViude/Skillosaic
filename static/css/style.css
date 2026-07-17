@@ -291,13 +291,6 @@ main {
     padding-top: 0.5rem;
 }
 
-.palette-arrow {
-    width: 16px;
-    color: var(--accent3);
-    flex-shrink: 0;
-    margin-top: auto;
-}
-
 /* Threshold panel */
 .threshold-panel {
     display: flex;
@@ -541,9 +534,5 @@ footer {
         min-height: unset;
         height: 100%;
         border-radius: 8px;
-    }
-
-    .palette-arrow {
-        transform: rotate(-90deg);
     }
 }
