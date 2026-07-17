@@ -5,15 +5,16 @@
 }
 
 :root {
-    --primary: #6c3fc5;
-    --accent1: #e94e77;
-    --accent2: #f4a261;
-    --accent3: #2a9d8f;
-    --bg: #0f0f1a;
-    --surface: #1a1a2e;
-    --border: #2a2a4a;
-    --text: #f0f0f0;
-    --muted: #7a7a9a;
+    --primary:  #003764;
+    --accent1:  #E34123;
+    --accent2:  #FEE300;
+    --accent3:  #0084AD;
+    --accent4:  #005580;
+    --bg:       #001e3c;
+    --surface:  #002a56;
+    --border:   #004080;
+    --text:     #f0f4f8;
+    --muted:    #7aa3c8;
 }
 
 body {
@@ -25,23 +26,41 @@ body {
     flex-direction: column;
 }
 
+/* Top stripe — Emirates Skills identity bar */
+body::before {
+    content: '';
+    display: block;
+    height: 5px;
+    background: linear-gradient(to right,
+        var(--primary)  0%   25%,
+        var(--accent3)  25%  50%,
+        var(--accent1)  50%  75%,
+        var(--accent2)  75%  100%
+    );
+    position: sticky;
+    top: 0;
+    z-index: 100;
+}
+
 /* Navbar */
 .navbar {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 1.1rem 2.5rem;
-    background: var(--surface);
+    padding: 1rem 2.5rem;
+    background: var(--primary);
     border-bottom: 1px solid var(--border);
 }
 
 .logo {
-    font-size: 1.5rem;
+    font-size: 1.4rem;
     font-weight: 800;
-    background: linear-gradient(135deg, var(--primary), var(--accent1));
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
+    color: #fff;
+    letter-spacing: 0.02em;
+}
+
+.logo span {
+    color: var(--accent2);
 }
 
 .navbar ul {
@@ -51,14 +70,14 @@ body {
 }
 
 .navbar ul a {
-    color: var(--muted);
+    color: rgba(255,255,255,0.75);
     text-decoration: none;
     font-weight: 500;
     transition: color 0.2s;
 }
 
 .navbar ul a:hover {
-    color: var(--text);
+    color: var(--accent2);
 }
 
 /* Hero */
@@ -74,7 +93,7 @@ body {
 }
 
 .highlight {
-    background: linear-gradient(135deg, var(--primary), var(--accent1));
+    background: linear-gradient(135deg, var(--accent3), var(--accent2));
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
@@ -121,7 +140,7 @@ body {
 .btn-upload {
     cursor: pointer;
     padding: 0.45rem 1.1rem;
-    background: var(--primary);
+    background: var(--accent3);
     color: #fff;
     border-radius: 6px;
     font-size: 0.85rem;
@@ -135,7 +154,7 @@ body {
 
 .btn-action {
     padding: 0.45rem 1.1rem;
-    background: linear-gradient(135deg, var(--primary), var(--accent1));
+    background: var(--accent3);
     color: #fff;
     border: none;
     border-radius: 6px;
@@ -151,11 +170,12 @@ body {
 }
 
 .btn-action.active {
-    background: linear-gradient(135deg, var(--accent1), var(--accent2));
+    background: var(--accent1);
 }
 
 .btn-export {
-    background: linear-gradient(135deg, var(--accent3), var(--accent4));
+    background: var(--primary);
+    border: 1px solid var(--accent3);
 }
 
 .btn-action:not(:disabled):hover {
@@ -176,7 +196,7 @@ body {
 }
 
 .image-area.dragover {
-    border-color: var(--primary);
+    border-color: var(--accent3);
 }
 
 .placeholder {
@@ -268,7 +288,7 @@ body {
 
 .palette-arrow {
     width: 16px;
-    color: var(--muted);
+    color: var(--accent3);
     flex-shrink: 0;
 }
 
