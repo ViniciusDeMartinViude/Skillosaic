@@ -31,17 +31,6 @@
                     <label class="btn-upload" for="file-input">Choose file</label>
                     <input type="file" id="file-input" accept="image/*" hidden />
                 </div>
-                <div class="image-area" id="upload-area">
-                    <div class="placeholder">
-                        <svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
-                            <rect x="8" y="14" width="48" height="36" rx="4" stroke="currentColor" stroke-width="2"/>
-                            <circle cx="22" cy="26" r="4" stroke="currentColor" stroke-width="2"/>
-                            <path d="M8 40 L20 28 L30 38 L40 30 L56 44" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
-                        </svg>
-                        <p>Drop an image here<br/>or click <strong>Choose file</strong></p>
-                    </div>
-                    <img id="preview-img" src="" alt="Original" hidden />
-                </div>
                 <div class="threshold-panel" id="threshold-panel">
                     <div class="threshold-row">
                         <span class="threshold-swatch black-swatch"></span>
@@ -55,6 +44,17 @@
                         <input type="range" id="white-threshold" min="50" max="100" value="90" step="1" />
                         <span id="white-value">90</span>
                     </div>
+                </div>
+                <div class="image-area" id="upload-area">
+                    <div class="placeholder">
+                        <svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <rect x="8" y="14" width="48" height="36" rx="4" stroke="currentColor" stroke-width="2"/>
+                            <circle cx="22" cy="26" r="4" stroke="currentColor" stroke-width="2"/>
+                            <path d="M8 40 L20 28 L30 38 L40 30 L56 44" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
+                        </svg>
+                        <p>Drop an image here<br/>or click <strong>Choose file</strong></p>
+                    </div>
+                    <img id="preview-img" src="" alt="Original" hidden />
                 </div>
             </div>
 
