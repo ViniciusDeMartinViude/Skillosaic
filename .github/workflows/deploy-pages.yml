@@ -29,6 +29,9 @@ jobs:
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v5
 
+      - name: Install PDF generation dependency
+        run: python -m pip install --disable-pip-version-check reportlab
+
       - name: Build static deployment artifact
         env:
           EXPERT_CONFIRMATION_PIN: ${{ secrets.EXPERT_CONFIRMATION_PIN }}
@@ -66,6 +69,14 @@ jobs:
 
           if ! grep -Eq '"sha256": "[a-f0-9]{64}"' _site/static/config/expert_pin.json; then
             echo "::error::Generated Expert PIN configuration is invalid."
+            exit 1
+          fi
+
+          python scripts/generate_ai_guide_pdf.py \
+            --output _site/static/docs/Skillosaic_AI_Detailed_Guide.pdf
+
+          if [[ ! -s _site/static/docs/Skillosaic_AI_Detailed_Guide.pdf ]]; then
+            echo "::error::AI technical guide PDF was not generated."
             exit 1
           fi
 
