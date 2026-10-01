@@ -543,6 +543,52 @@
                     </div>
                 </section>
 
+                <section class="submission-image-palette-section" aria-labelledby="submission-image-palette-title">
+                    <div class="submission-section-heading submission-capture-heading">
+                        <div>
+                            <span class="panel-label">Task Step 2</span>
+                            <h4 id="submission-image-palette-title">2 · Image &amp; K-Means palette</h4>
+                            <p>Capture the current image analysis directly from the Mosaic &amp; Contours tab.</p>
+                        </div>
+                        <button class="btn-action submission-capture-btn" id="submission-capture-mosaic" type="button">
+                            Capture from Mosaic &amp; Contours
+                        </button>
+                    </div>
+
+                    <div class="submission-capture-status" id="submission-capture-status" aria-live="polite">
+                        No Mosaic &amp; Contours result captured yet.
+                    </div>
+
+                    <div class="submission-captured-analysis" id="submission-captured-analysis" hidden>
+                        <div class="submission-analysis-images">
+                            <figure>
+                                <div class="submission-analysis-image-frame">
+                                    <img id="submission-original-image" alt="Captured original image" />
+                                </div>
+                                <figcaption>Original image</figcaption>
+                            </figure>
+                            <figure>
+                                <div class="submission-analysis-image-frame">
+                                    <img id="submission-mosaic-image" alt="Captured K-Means mosaic result" />
+                                </div>
+                                <figcaption>K-Means mosaic result</figcaption>
+                            </figure>
+                        </div>
+
+                        <div class="submission-analysis-meta">
+                            <div class="submission-analysis-settings" id="submission-analysis-settings"></div>
+
+                            <div class="submission-palette-block">
+                                <div class="submission-palette-heading">
+                                    <strong>K-Means palette · LAB</strong>
+                                    <span id="submission-palette-count"></span>
+                                </div>
+                                <div class="submission-palette-list" id="submission-palette-list"></div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
                 <div class="submission-actions">
                     <button class="btn-action" id="submission-save-draft" type="button">Save Draft</button>
                 </div>
