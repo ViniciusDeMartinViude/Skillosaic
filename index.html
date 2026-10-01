@@ -290,6 +290,13 @@
                     <span class="panel-label">Representative Colors &amp; Formulations</span>
                     <p>Camera LAB → Nix-equivalent LAB → R/Y/B formulation</p>
                 </div>
+                <div class="paint-test-color-status" id="paint-test-color-status" aria-live="polite">
+                    <span class="paint-test-color-status-swatch" id="paint-test-color-status-swatch"></span>
+                    <div>
+                        <small>Test color</small>
+                        <strong id="paint-test-color-status-label">Not selected</strong>
+                    </div>
+                </div>
             </div>
             <div id="paint-palette-cards" class="paint-palette-cards">
                 <div class="paint-empty-state">No colors analyzed yet.</div>
@@ -424,6 +431,12 @@
             <div class="formulation-modal-source">
                 <span>Model source</span>
                 <strong id="formulation-modal-source">—</strong>
+            </div>
+
+            <div class="formulation-modal-actions">
+                <button class="btn-action paint-test-color-modal-btn" id="formulation-modal-test-color-btn" type="button">
+                    Set as test color
+                </button>
             </div>
         </div>
     </div>
@@ -641,6 +654,76 @@
                                 <div class="submission-manual-capture-swatch" id="submission-manual-paint-swatch"></div>
                                 <div class="submission-manual-capture-data" id="submission-manual-paint-data"></div>
                             </div>
+                        </div>
+                    </div>
+                </section>
+
+                <section class="submission-test-color-section" aria-labelledby="submission-test-color-title">
+                    <div class="submission-section-heading submission-capture-heading">
+                        <div>
+                            <span class="panel-label">Task Step 4</span>
+                            <h4 id="submission-test-color-title">4 · Test color</h4>
+                            <p>Select one formulation card in Paint Formulation, then capture it here as the color to reproduce and test.</p>
+                        </div>
+                        <button class="btn-action submission-capture-btn" id="submission-capture-test-color" type="button">
+                            Capture selected test color
+                        </button>
+                    </div>
+
+                    <div class="submission-capture-status" id="submission-test-color-status" aria-live="polite">
+                        No test color captured yet.
+                    </div>
+
+                    <div class="submission-test-color-result" id="submission-test-color-result" hidden>
+                        <div class="submission-test-color-hero">
+                            <div class="submission-test-color-swatch" id="submission-test-color-swatch"></div>
+                            <div class="submission-test-color-title">
+                                <span>Selected target</span>
+                                <strong id="submission-test-color-label">—</strong>
+                                <small id="submission-test-color-coverage">—</small>
+                            </div>
+                            <div class="submission-test-color-delta">
+                                <span>Predicted ΔE00</span>
+                                <strong id="submission-test-color-deltae">—</strong>
+                            </div>
+                        </div>
+
+                        <div class="submission-test-color-labs">
+                            <div>
+                                <span>Camera LAB</span>
+                                <strong id="submission-test-color-camera-lab">—</strong>
+                            </div>
+                            <div class="target">
+                                <span>Target LAB · Nix-equivalent</span>
+                                <strong id="submission-test-color-target-lab">—</strong>
+                            </div>
+                            <div>
+                                <span>Predicted LAB</span>
+                                <strong id="submission-test-color-predicted-lab">—</strong>
+                            </div>
+                        </div>
+
+                        <div class="submission-paint-recipe submission-test-color-recipe">
+                            <div>
+                                <span>Red</span>
+                                <strong id="submission-test-color-red-percent">—</strong>
+                                <b id="submission-test-color-red-grams">—</b>
+                            </div>
+                            <div>
+                                <span>Yellow</span>
+                                <strong id="submission-test-color-yellow-percent">—</strong>
+                                <b id="submission-test-color-yellow-grams">—</b>
+                            </div>
+                            <div>
+                                <span>Blue</span>
+                                <strong id="submission-test-color-blue-percent">—</strong>
+                                <b id="submission-test-color-blue-grams">—</b>
+                            </div>
+                        </div>
+
+                        <div class="submission-test-color-meta">
+                            <span id="submission-test-color-total">—</span>
+                            <span id="submission-test-color-source">—</span>
                         </div>
                     </div>
                 </section>

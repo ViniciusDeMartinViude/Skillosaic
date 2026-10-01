@@ -46,6 +46,25 @@
     const manualPaintSwatchEl = document.getElementById('submission-manual-paint-swatch');
     const manualPaintDataEl = document.getElementById('submission-manual-paint-data');
 
+    const captureTestColorBtn = document.getElementById('submission-capture-test-color');
+    const testColorCaptureStatusEl = document.getElementById('submission-test-color-status');
+    const testColorResultEl = document.getElementById('submission-test-color-result');
+    const testColorSwatchEl = document.getElementById('submission-test-color-swatch');
+    const testColorLabelEl = document.getElementById('submission-test-color-label');
+    const testColorCoverageEl = document.getElementById('submission-test-color-coverage');
+    const testColorDeltaEEl = document.getElementById('submission-test-color-deltae');
+    const testColorCameraLabEl = document.getElementById('submission-test-color-camera-lab');
+    const testColorTargetLabEl = document.getElementById('submission-test-color-target-lab');
+    const testColorPredictedLabEl = document.getElementById('submission-test-color-predicted-lab');
+    const testColorRedPercentEl = document.getElementById('submission-test-color-red-percent');
+    const testColorYellowPercentEl = document.getElementById('submission-test-color-yellow-percent');
+    const testColorBluePercentEl = document.getElementById('submission-test-color-blue-percent');
+    const testColorRedGramsEl = document.getElementById('submission-test-color-red-grams');
+    const testColorYellowGramsEl = document.getElementById('submission-test-color-yellow-grams');
+    const testColorBlueGramsEl = document.getElementById('submission-test-color-blue-grams');
+    const testColorTotalEl = document.getElementById('submission-test-color-total');
+    const testColorSourceEl = document.getElementById('submission-test-color-source');
+
     if (!fab || !overlay || !modal) return;
 
     let currentDraft = null;
@@ -103,7 +122,8 @@
                     ppeConfirmation: ''
                 },
                 imageKMeansPalette: null,
-                paintFormulation: null
+                paintFormulation: null,
+                testColor: null
             }
         };
     }
@@ -673,6 +693,125 @@
         }
     }
 
+    function clearTestColorView() {
+        if (testColorResultEl) testColorResultEl.hidden=true;
+        if (testColorSwatchEl) testColorSwatchEl.style.background='';
+        if (testColorLabelEl) testColorLabelEl.textContent='—';
+        if (testColorCoverageEl) testColorCoverageEl.textContent='—';
+        if (testColorDeltaEEl) testColorDeltaEEl.textContent='—';
+        if (testColorCameraLabEl) testColorCameraLabEl.textContent='—';
+        if (testColorTargetLabEl) testColorTargetLabEl.textContent='—';
+        if (testColorPredictedLabEl) testColorPredictedLabEl.textContent='—';
+        if (testColorRedPercentEl) testColorRedPercentEl.textContent='—';
+        if (testColorYellowPercentEl) testColorYellowPercentEl.textContent='—';
+        if (testColorBluePercentEl) testColorBluePercentEl.textContent='—';
+        if (testColorRedGramsEl) testColorRedGramsEl.textContent='—';
+        if (testColorYellowGramsEl) testColorYellowGramsEl.textContent='—';
+        if (testColorBlueGramsEl) testColorBlueGramsEl.textContent='—';
+        if (testColorTotalEl) testColorTotalEl.textContent='—';
+        if (testColorSourceEl) testColorSourceEl.textContent='—';
+    }
+
+    function renderCapturedTestColor(snapshot) {
+        if (!snapshot || typeof snapshot !== 'object') {
+            clearTestColorView();
+            if (testColorCaptureStatusEl) {
+                testColorCaptureStatusEl.textContent='No test color captured yet.';
+                testColorCaptureStatusEl.classList.remove('is-success','is-error');
+            }
+            if (captureTestColorBtn) captureTestColorBtn.textContent='Capture selected test color';
+            return;
+        }
+
+        if (testColorResultEl) testColorResultEl.hidden=false;
+
+        const rgb=Array.isArray(snapshot.rgb) ? snapshot.rgb : [0,0,0];
+        if (testColorSwatchEl) {
+            testColorSwatchEl.style.background=`rgb(${rgb[0]}, ${rgb[1]}, ${rgb[2]})`;
+        }
+        if (testColorLabelEl) testColorLabelEl.textContent=snapshot.label || 'Selected color';
+        if (testColorCoverageEl) {
+            testColorCoverageEl.textContent=
+                `${Number(snapshot.coveragePercent || 0).toFixed(1)}% coverage · RGB ${rgb.join(', ')}`;
+        }
+
+        const formulation=snapshot.formulation || {};
+        const percentages=formulation.recipePercent || {};
+        const grams=formulation.grams || {};
+
+        if (testColorDeltaEEl) {
+            testColorDeltaEEl.textContent=Number(formulation.predictedDeltaE00 || 0).toFixed(2);
+        }
+        if (testColorCameraLabEl) testColorCameraLabEl.textContent=formatLabValues(snapshot.cameraLab);
+        if (testColorTargetLabEl) {
+            testColorTargetLabEl.textContent=formatLabValues(snapshot.targetLab || snapshot.nixEquivalentLab);
+        }
+        if (testColorPredictedLabEl) {
+            testColorPredictedLabEl.textContent=formatLabValues(formulation.predictedLab);
+        }
+
+        if (testColorRedPercentEl) testColorRedPercentEl.textContent=`${Number(percentages.red || 0).toFixed(1)}%`;
+        if (testColorYellowPercentEl) testColorYellowPercentEl.textContent=`${Number(percentages.yellow || 0).toFixed(1)}%`;
+        if (testColorBluePercentEl) testColorBluePercentEl.textContent=`${Number(percentages.blue || 0).toFixed(1)}%`;
+
+        if (testColorRedGramsEl) testColorRedGramsEl.textContent=`${Number(grams.red || 0).toFixed(2)} g`;
+        if (testColorYellowGramsEl) testColorYellowGramsEl.textContent=`${Number(grams.yellow || 0).toFixed(2)} g`;
+        if (testColorBlueGramsEl) testColorBlueGramsEl.textContent=`${Number(grams.blue || 0).toFixed(2)} g`;
+
+        if (testColorTotalEl) {
+            testColorTotalEl.textContent=`Total paint: ${Number(snapshot.totalPaintGrams || 0).toFixed(0)} g`;
+        }
+        if (testColorSourceEl) testColorSourceEl.textContent=formulation.source || '';
+
+        const selectedAt=snapshot.selectedAt ? new Date(snapshot.selectedAt) : null;
+        if (testColorCaptureStatusEl) {
+            testColorCaptureStatusEl.textContent=selectedAt && !Number.isNaN(selectedAt.getTime())
+                ? `${snapshot.label || 'Test color'} captured · selected ${selectedAt.toLocaleString()}`
+                : `${snapshot.label || 'Test color'} captured from Paint Formulation.`;
+            testColorCaptureStatusEl.classList.remove('is-error');
+            testColorCaptureStatusEl.classList.add('is-success');
+        }
+
+        if (captureTestColorBtn) captureTestColorBtn.textContent='Recapture selected test color';
+    }
+
+    function captureSelectedTestColor() {
+        if (!currentDraft) return;
+
+        const paintApi=window.SkillosaicPaint;
+        if (!paintApi || typeof paintApi.getSelectedTestColor!=='function') {
+            testColorCaptureStatusEl.textContent='Test-color selection is not available.';
+            testColorCaptureStatusEl.classList.remove('is-success');
+            testColorCaptureStatusEl.classList.add('is-error');
+            return;
+        }
+
+        const snapshot=paintApi.getSelectedTestColor();
+        if (!snapshot) {
+            testColorCaptureStatusEl.textContent=
+                'No test color selected. In Paint Formulation, analyze an image and click “Set as test color” on one formulation card.';
+            testColorCaptureStatusEl.classList.remove('is-success');
+            testColorCaptureStatusEl.classList.add('is-error');
+            return;
+        }
+
+        syncIdentificationToDraft();
+        currentDraft.fields=currentDraft.fields && typeof currentDraft.fields==='object'
+            ? currentDraft.fields
+            : {};
+        currentDraft.fields.testColor=snapshot;
+
+        const saved=saveCurrentDraft();
+        renderCapturedTestColor(snapshot);
+
+        if (!saved) {
+            testColorCaptureStatusEl.textContent=
+                'The selected test color was captured in memory, but the browser could not save it to local storage.';
+            testColorCaptureStatusEl.classList.remove('is-success');
+            testColorCaptureStatusEl.classList.add('is-error');
+        }
+    }
+
     function renderDraft(draft, created) {
         currentDraft = draft;
         currentTokenEl.textContent = draft.token;
@@ -692,6 +831,11 @@
             ? draft.fields.paintFormulation
             : null;
         renderCapturedPaint(paintFormulation);
+
+        const testColor = draft.fields && draft.fields.testColor
+            ? draft.fields.testColor
+            : null;
+        renderCapturedTestColor(testColor);
 
         tokenStatus.textContent = created
             ? 'New local submission draft created.'
@@ -842,6 +986,17 @@
     if (capturePaintBtn) {
         capturePaintBtn.addEventListener('click', capturePaintFormulation);
     }
+
+    if (captureTestColorBtn) {
+        captureTestColorBtn.addEventListener('click', captureSelectedTestColor);
+    }
+
+    window.addEventListener('skillosaic:test-color-selected',event=>{
+        if (!testColorCaptureStatusEl || !event.detail) return;
+        testColorCaptureStatusEl.textContent=
+            `${event.detail.label || 'Test color'} selected in Paint Formulation. Click capture to store it in this submission.`;
+        testColorCaptureStatusEl.classList.remove('is-error','is-success');
+    });
 
     saveDraftBtn.addEventListener('click', () => {
         if (!currentDraft) return;
