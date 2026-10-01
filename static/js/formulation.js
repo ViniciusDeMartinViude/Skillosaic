@@ -98,6 +98,8 @@
     let currentSource = null;
     let lastFormulationRows = null;
     let lastManualCalculation = null;
+    let lastKMeansRender = null;
+    let activeKMeansClusterIndex = null;
     let selectedFormulationIndex = null;
     let formulationModalPreviousFocus = null;
     let manualLabModalPreviousFocus = null;
@@ -436,14 +438,20 @@
         clusters.forEach((cluster,newIndex)=>remap[cluster.oldIndex]=newIndex);
         const meanColors=clusters.map(c=>c.rgb);
         const output=new ImageData(width,height);
+        const sortedLabels=new Int32Array(n);
         for (let i=0;i<n;i++) {
             const newLabel=remap[fullLabels[i]];
+            sortedLabels[i]=newLabel;
             const rgb=meanColors[newLabel];
             const p=i*4;
             output.data[p]=rgb[0]; output.data[p+1]=rgb[1]; output.data[p+2]=rgb[2]; output.data[p+3]=255;
         }
 
-        return {output,clusters:clusters.map((c,i)=>({...c,index:i}))};
+        return {
+            output,
+            labelMap:sortedLabels,
+            clusters:clusters.map((c,i)=>({...c,index:i}))
+        };
     }
 
     function clearNativeCameraControls(message='Start the camera to detect focus, exposure and white-balance capabilities.') {
@@ -762,6 +770,20 @@
         resultCanvas.getContext('2d').putImageData(result.output,0,0);
         resultPlaceholder.style.display='none';
 
+        lastKMeansRender={
+            width:result.output.width,
+            height:result.output.height,
+            labels:result.labelMap,
+            baseImageData:new ImageData(
+                new Uint8ClampedArray(result.output.data),
+                result.output.width,
+                result.output.height
+            ),
+            highlightCache:new Map()
+        };
+        activeKMeansClusterIndex=null;
+        resultCanvas.title='Move over the K-Means result to highlight its formulation card';
+
         const rows=result.clusters.map(cluster=>{
             const cameraLab=rgbToLabLocal(...cluster.rgb);
             const nixLab=correctCameraLab(cameraLab);
@@ -771,6 +793,122 @@
         lastFormulationRows=rows;
         renderFormulationCards(rows,grams);
         statusEl.textContent=`${k} colors analyzed`;
+    }
+
+    function drawResultImageData(imageData) {
+        if (!imageData) return;
+        const ctx=resultCanvas.getContext('2d');
+        ctx.putImageData(imageData,0,0);
+    }
+
+    function buildClusterHighlight(clusterIndex) {
+        if (!lastKMeansRender) return null;
+        if (lastKMeansRender.highlightCache.has(clusterIndex)) {
+            return lastKMeansRender.highlightCache.get(clusterIndex);
+        }
+
+        const {width,height,labels,baseImageData}=lastKMeansRender;
+        const data=new Uint8ClampedArray(baseImageData.data);
+
+        for (let i=0;i<labels.length;i++) {
+            const p=i*4;
+            if (labels[i]===clusterIndex) {
+                data[p]=Math.min(255,Math.round(data[p]*1.10+10));
+                data[p+1]=Math.min(255,Math.round(data[p+1]*1.10+10));
+                data[p+2]=Math.min(255,Math.round(data[p+2]*1.10+10));
+            } else {
+                const gray=0.2126*data[p]+0.7152*data[p+1]+0.0722*data[p+2];
+                const dim=Math.round(gray*0.20);
+                data[p]=dim;
+                data[p+1]=dim;
+                data[p+2]=dim;
+            }
+        }
+
+        // Bright outline around the selected K-Means region.
+        for (let y=0;y<height;y++) {
+            for (let x=0;x<width;x++) {
+                const i=y*width+x;
+                if (labels[i]!==clusterIndex) continue;
+
+                const edge=
+                    x===0 || x===width-1 || y===0 || y===height-1 ||
+                    labels[i-1]!==clusterIndex ||
+                    labels[i+1]!==clusterIndex ||
+                    labels[i-width]!==clusterIndex ||
+                    labels[i+width]!==clusterIndex;
+
+                if (edge) {
+                    const p=i*4;
+                    data[p]=255;
+                    data[p+1]=244;
+                    data[p+2]=96;
+                    data[p+3]=255;
+                }
+            }
+        }
+
+        const highlighted=new ImageData(data,width,height);
+        lastKMeansRender.highlightCache.set(clusterIndex,highlighted);
+        return highlighted;
+    }
+
+    function setActiveFormulationCard(clusterIndex) {
+        cardsEl.querySelectorAll('.paint-color-card.cluster-hover-active')
+            .forEach(card=>card.classList.remove('cluster-hover-active'));
+
+        if (clusterIndex===null || clusterIndex===undefined) return;
+        const card=cardsEl.querySelector(`[data-formulation-index="${clusterIndex}"]`);
+        if (card) card.classList.add('cluster-hover-active');
+    }
+
+    function highlightKMeansCluster(clusterIndex) {
+        if (!lastKMeansRender) return;
+        if (clusterIndex===activeKMeansClusterIndex) return;
+
+        activeKMeansClusterIndex=clusterIndex;
+        setActiveFormulationCard(clusterIndex);
+
+        if (clusterIndex===null || clusterIndex===undefined) {
+            drawResultImageData(lastKMeansRender.baseImageData);
+            return;
+        }
+
+        const highlighted=buildClusterHighlight(clusterIndex);
+        drawResultImageData(highlighted);
+    }
+
+    function clearKMeansHighlight() {
+        if (!lastKMeansRender) return;
+        activeKMeansClusterIndex=null;
+        setActiveFormulationCard(null);
+        drawResultImageData(lastKMeansRender.baseImageData);
+    }
+
+    function resultCanvasPixelFromPointer(event) {
+        if (!lastKMeansRender || !resultCanvas.width || !resultCanvas.height) return null;
+
+        const rect=resultCanvas.getBoundingClientRect();
+        const scale=Math.min(
+            rect.width/resultCanvas.width,
+            rect.height/resultCanvas.height
+        );
+        const displayWidth=resultCanvas.width*scale;
+        const displayHeight=resultCanvas.height*scale;
+        const offsetX=(rect.width-displayWidth)/2;
+        const offsetY=(rect.height-displayHeight)/2;
+
+        const localX=event.clientX-rect.left-offsetX;
+        const localY=event.clientY-rect.top-offsetY;
+
+        if (
+            localX<0 || localY<0 ||
+            localX>=displayWidth || localY>=displayHeight
+        ) return null;
+
+        const x=Math.min(resultCanvas.width-1,Math.floor(localX/scale));
+        const y=Math.min(resultCanvas.height-1,Math.floor(localY/scale));
+        return {x,y,index:y*resultCanvas.width+x};
     }
 
     function renderFormulationModal(index, grams) {
@@ -866,6 +1004,11 @@
 
                     <div class="small paint-model-info">Predicted ΔE00: ${row.formulation.deltaE.toFixed(2)} · ${row.formulation.source}</div>
                 </div>`;
+
+            card.addEventListener('mouseenter',()=>highlightKMeansCluster(i));
+            card.addEventListener('mouseleave',clearKMeansHighlight);
+            card.addEventListener('focus',()=>highlightKMeansCluster(i));
+            card.addEventListener('blur',clearKMeansHighlight);
 
             card.addEventListener('click',()=>openFormulationModal(i));
             card.addEventListener('keydown',event=>{
@@ -1244,6 +1387,19 @@
     totalGramsInput.addEventListener('blur',normalizeTotalPaintInput);
 
     function resizeVisibleCanvases() {}
+
+    resultCanvas.addEventListener('pointermove',event=>{
+        const pixel=resultCanvasPixelFromPointer(event);
+        if (!pixel || !lastKMeansRender) {
+            clearKMeansHighlight();
+            return;
+        }
+
+        const clusterIndex=lastKMeansRender.labels[pixel.index];
+        highlightKMeansCluster(clusterIndex);
+    });
+
+    resultCanvas.addEventListener('pointerleave',clearKMeansHighlight);
 
     clearNativeCameraControls();
     refreshCameraDevices();
