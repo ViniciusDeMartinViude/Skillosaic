@@ -753,13 +753,23 @@
                     <div class="small">RGB ${r}, ${g}, ${b}</div>
                     <div class="small">Camera LAB: ${fmtLab(row.cameraLab)}</div>
                     <div class="small">Nix-equivalent LAB: ${fmtLab(row.nixLab)}</div>
+
                     <div class="paint-recipe">
                         <div><span>Red</span><strong>${recipe[0].toFixed(1)}%</strong></div>
                         <div><span>Yellow</span><strong>${recipe[1].toFixed(1)}%</strong></div>
                         <div><span>Blue</span><strong>${recipe[2].toFixed(1)}%</strong></div>
                     </div>
-                    <div class="paint-grams">For ${grams.toFixed(2)} g: Red ${amounts[0].toFixed(2)} g · Yellow ${amounts[1].toFixed(2)} g · Blue ${amounts[2].toFixed(2)} g</div>
-                    <div class="small">Predicted ΔE00: ${row.formulation.deltaE.toFixed(2)} · ${row.formulation.source}</div>
+
+                    <div class="paint-amount-section">
+                        <div class="paint-total-label">For <strong data-role="total-grams">${Math.round(grams)}</strong> g total</div>
+                        <div class="paint-amount-grid">
+                            <div><span>Red</span><strong data-role="red-grams">${amounts[0].toFixed(2)} g</strong></div>
+                            <div><span>Yellow</span><strong data-role="yellow-grams">${amounts[1].toFixed(2)} g</strong></div>
+                            <div><span>Blue</span><strong data-role="blue-grams">${amounts[2].toFixed(2)} g</strong></div>
+                        </div>
+                    </div>
+
+                    <div class="small paint-model-info">Predicted ΔE00: ${row.formulation.deltaE.toFixed(2)} · ${row.formulation.source}</div>
                 </div>`;
             cardsEl.appendChild(card);
         });
@@ -772,12 +782,17 @@
             const recipe=row.formulation.recipe;
             const amounts=recipe.map(p=>grams*p/100);
             const card=cardsEl.querySelector(`[data-formulation-index="${i}"]`);
-            const gramsEl=card ? card.querySelector('.paint-grams') : null;
-            if (gramsEl) {
-                gramsEl.textContent=
-                    `For ${grams.toFixed(2)} g: Red ${amounts[0].toFixed(2)} g · `+
-                    `Yellow ${amounts[1].toFixed(2)} g · Blue ${amounts[2].toFixed(2)} g`;
-            }
+            if (!card) return;
+
+            const totalEl=card.querySelector('[data-role="total-grams"]');
+            const redEl=card.querySelector('[data-role="red-grams"]');
+            const yellowEl=card.querySelector('[data-role="yellow-grams"]');
+            const blueEl=card.querySelector('[data-role="blue-grams"]');
+
+            if (totalEl) totalEl.textContent=String(Math.round(grams));
+            if (redEl) redEl.textContent=`${amounts[0].toFixed(2)} g`;
+            if (yellowEl) yellowEl.textContent=`${amounts[1].toFixed(2)} g`;
+            if (blueEl) blueEl.textContent=`${amounts[2].toFixed(2)} g`;
         });
     }
 
