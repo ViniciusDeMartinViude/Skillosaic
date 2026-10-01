@@ -866,7 +866,6 @@
         const grams=testColor.formulation.grams || {};
 
         return ['red','yellow','blue']
-            .filter(key=>Number(recipe[key] || 0) > 0.0001)
             .map(key=>({
                 key,
                 label:PAINT_META[key].label,
