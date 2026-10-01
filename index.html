@@ -728,10 +728,78 @@
                     </div>
                 </section>
 
+                <section class="submission-weighing-section" aria-labelledby="submission-weighing-title">
+                    <div class="submission-section-heading">
+                        <div>
+                            <span class="panel-label">Task Step 5</span>
+                            <h4 id="submission-weighing-title">5 · Weighing</h4>
+                            <p>Enter the code printed on each paint can used by the selected test-color recipe, then ask the Expert to confirm before mixing.</p>
+                        </div>
+                    </div>
+
+                    <div class="submission-weighing-target" id="submission-weighing-target" hidden>
+                        <div class="submission-weighing-target-swatch" id="submission-weighing-target-swatch"></div>
+                        <div>
+                            <span>Test color</span>
+                            <strong id="submission-weighing-target-label">—</strong>
+                            <small id="submission-weighing-target-total">—</small>
+                        </div>
+                    </div>
+
+                    <div class="submission-capture-status" id="submission-weighing-status" aria-live="polite">
+                        Capture a test color in Step 4 before entering paint codes.
+                    </div>
+
+                    <div class="submission-weighing-paints" id="submission-weighing-paints"></div>
+
+                    <div class="submission-weighing-code-help">
+                        Paint code format: <strong>A1234B</strong> — one letter, four digits, one letter.
+                    </div>
+
+                    <div class="submission-weighing-confirmation">
+                        <div class="submission-weighing-confirmation-copy">
+                            <span>Expert confirmation</span>
+                            <strong id="submission-weighing-confirmation-label">Not requested</strong>
+                            <small id="submission-weighing-confirmation-time">The Expert must check the paint codes and expected weights before mixing.</small>
+                        </div>
+                        <button class="btn-action" id="submission-request-expert-confirmation" type="button" disabled>
+                            Request Expert Confirmation
+                        </button>
+                    </div>
+                </section>
+
                 <div class="submission-actions">
                     <button class="btn-action" id="submission-save-draft" type="button">Save Draft</button>
                 </div>
             </section>
+        </div>
+    </div>
+
+    <!-- Expert weighing confirmation modal -->
+    <div class="modal-overlay expert-weighing-modal-overlay" id="expert-weighing-modal-overlay" hidden>
+        <div class="modal expert-weighing-modal" role="dialog" aria-modal="true" aria-labelledby="expert-weighing-modal-title">
+            <button class="modal-close" id="expert-weighing-modal-close" aria-label="Close expert confirmation">&times;</button>
+
+            <div class="expert-weighing-modal-header">
+                <span class="panel-label">Expert Check</span>
+                <h2 id="expert-weighing-modal-title">Confirm paint codes and weights</h2>
+                <p>Review the cans and scale before the student mixes the paint.</p>
+            </div>
+
+            <div class="expert-weighing-summary" id="expert-weighing-summary"></div>
+
+            <div class="expert-weighing-warning">
+                This confirmation records the Expert check in this browser. No Expert PIN or identity is required in this version.
+            </div>
+
+            <div class="expert-weighing-actions">
+                <button class="btn-action expert-needs-correction-btn" id="expert-weighing-reject" type="button">
+                    Needs Correction
+                </button>
+                <button class="btn-action expert-confirm-btn" id="expert-weighing-confirm" type="button">
+                    Expert Confirm
+                </button>
+            </div>
         </div>
     </div>
 
