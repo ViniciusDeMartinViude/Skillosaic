@@ -768,6 +768,87 @@
                     </div>
                 </section>
 
+                <section class="submission-verification-section" aria-labelledby="submission-verification-title">
+                    <div class="submission-section-heading">
+                        <div>
+                            <span class="panel-label">Task Step 6</span>
+                            <h4 id="submission-verification-title">6 · Verification</h4>
+                            <p>After painting and scanning the mixed color, enter the measured LAB values and compare them with the selected target color.</p>
+                        </div>
+                    </div>
+
+                    <div class="submission-verification-target" id="submission-verification-target" hidden>
+                        <div class="submission-verification-swatch" id="submission-verification-target-swatch"></div>
+                        <div>
+                            <span>Desired color</span>
+                            <strong id="submission-verification-target-label">—</strong>
+                            <small id="submission-verification-target-lab">—</small>
+                        </div>
+                    </div>
+
+                    <div class="submission-capture-status" id="submission-verification-status" aria-live="polite">
+                        Capture a test color in Step 4 before verification.
+                    </div>
+
+                    <div class="submission-verification-inputs">
+                        <label>
+                            <span>Measured L*</span>
+                            <input id="submission-verification-L" type="number" step="0.01" min="0" max="100" placeholder="0.00" />
+                        </label>
+                        <label>
+                            <span>Measured a*</span>
+                            <input id="submission-verification-a" type="number" step="0.01" placeholder="0.00" />
+                        </label>
+                        <label>
+                            <span>Measured b*</span>
+                            <input id="submission-verification-b" type="number" step="0.01" placeholder="0.00" />
+                        </label>
+                        <button class="btn-action" id="submission-calculate-verification" type="button" disabled>
+                            Calculate Verification
+                        </button>
+                    </div>
+
+                    <div class="submission-verification-result" id="submission-verification-result" hidden>
+                        <div class="submission-verification-swatches">
+                            <div>
+                                <div class="submission-verification-swatch large" id="submission-verification-desired-swatch"></div>
+                                <span>Desired</span>
+                            </div>
+                            <div>
+                                <div class="submission-verification-swatch large" id="submission-verification-measured-swatch"></div>
+                                <span>Measured</span>
+                            </div>
+                        </div>
+
+                        <div class="submission-verification-labs">
+                            <div>
+                                <span>Desired LAB</span>
+                                <strong id="submission-verification-desired-lab">—</strong>
+                            </div>
+                            <div>
+                                <span>Measured LAB</span>
+                                <strong id="submission-verification-measured-lab">—</strong>
+                            </div>
+                        </div>
+
+                        <div class="submission-verification-metrics">
+                            <div class="submission-verification-delta">
+                                <span>ΔE00 distance</span>
+                                <strong id="submission-verification-deltae">—</strong>
+                            </div>
+                            <div class="submission-verification-score">
+                                <span>Verification score</span>
+                                <strong id="submission-verification-score">—</strong>
+                                <small>0–100 linear score · 100 at ΔE00 = 0 · 0 at ΔE00 = 100 or higher</small>
+                            </div>
+                        </div>
+
+                        <div class="submission-verification-formula">
+                            Score = max(0, 100 × (1 − ΔE00 / 100))
+                        </div>
+                    </div>
+                </section>
+
                 <div class="submission-actions">
                     <button class="btn-action" id="submission-save-draft" type="button">Save Draft</button>
                 </div>
