@@ -735,6 +735,7 @@
     }
 
     function renderFormulationCards(rows,grams) {
+        cardsEl.scrollTop=0;
         cardsEl.innerHTML='';
         rows.forEach((row,i)=>{
             const [r,g,b]=row.rgb;
@@ -773,6 +774,11 @@
                 </div>`;
             cardsEl.appendChild(card);
         });
+
+        // Re-analysis can preserve the previous scroll position in some browsers.
+        // Always start the new formulation set at the first row.
+        cardsEl.scrollTop=0;
+        requestAnimationFrame(()=>{ cardsEl.scrollTop=0; });
     }
 
     function updateFormulationAmounts(grams) {
