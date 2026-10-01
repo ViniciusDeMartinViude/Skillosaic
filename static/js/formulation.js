@@ -7,6 +7,7 @@
     const mosaicApp = document.getElementById('mosaic-app');
     const paintApp = document.getElementById('paint-app');
     const aiApp = document.getElementById('ai-app');
+    const submissionFab = document.getElementById('submission-fab');
 
     function setTab(name) {
         const activeName = ['mosaic','paint','ai'].includes(name) ? name : 'mosaic';
@@ -24,6 +25,10 @@
                 entry.tab.setAttribute('aria-selected', String(active));
             }
         });
+
+        if (submissionFab) {
+            submissionFab.hidden = activeName === 'ai';
+        }
 
         if (activeName === 'paint') {
             window.setTimeout(resizeVisibleCanvases, 0);
