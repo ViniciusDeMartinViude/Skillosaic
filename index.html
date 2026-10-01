@@ -17,7 +17,16 @@
         </nav>
     </header>
 
-    <main>
+    <div class="app-tabs" role="tablist" aria-label="Skillosaic tools">
+        <button class="app-tab active" id="tab-mosaic" role="tab" aria-selected="true" aria-controls="mosaic-app">
+            Mosaic &amp; Contours
+        </button>
+        <button class="app-tab" id="tab-formulation" role="tab" aria-selected="false" aria-controls="paint-app">
+            Paint Formulation
+        </button>
+    </div>
+
+    <main id="mosaic-app" class="app-tab-panel active">
         <section class="hero">
             <p class="subtitle">Upload a photo and watch K-Means cluster your pixels into art.</p>
         </section>
@@ -104,6 +113,112 @@
         </section>
     </main>
 
+    <main id="paint-app" class="app-tab-panel paint-app" hidden>
+        <section class="paint-hero">
+            <div>
+                <p class="paint-kicker">Browser-based color formulation</p>
+                <h1>Camera / Image → K-Means → LAB → Paint Mix</h1>
+                <p>
+                    Everything runs locally in the browser. Camera access is used only after permission is granted.
+                    The formulation model currently uses Red, Yellow and Blue.
+                </p>
+            </div>
+        </section>
+
+        <section class="paint-controls">
+            <div class="paint-control-group">
+                <label for="paint-k">K-Means colors</label>
+                <select id="paint-k">
+                    <option>3</option><option>4</option><option selected>5</option><option>6</option>
+                    <option>7</option><option>8</option><option>9</option><option>10</option>
+                </select>
+            </div>
+            <div class="paint-control-group">
+                <label for="paint-total-grams">Total paint</label>
+                <div class="paint-inline-input">
+                    <input id="paint-total-grams" type="number" min="0.01" step="0.01" value="100" />
+                    <span>g</span>
+                </div>
+            </div>
+            <button class="btn-action" id="paint-start-camera">Start Camera</button>
+            <button class="btn-action" id="paint-capture" disabled>Capture &amp; Analyze</button>
+            <label class="btn-upload paint-upload-label" for="paint-file-input">Load Image</label>
+            <input type="file" id="paint-file-input" accept="image/*" hidden />
+            <span class="paint-status" id="paint-status">Ready</span>
+        </section>
+
+        <section class="paint-grid">
+            <article class="paint-card">
+                <div class="paint-card-header">
+                    <div>
+                        <span class="panel-label">Source</span>
+                        <strong id="paint-source-label">Camera / image</strong>
+                    </div>
+                </div>
+                <div class="paint-media-frame">
+                    <video id="paint-video" autoplay playsinline muted></video>
+                    <canvas id="paint-source-canvas" hidden></canvas>
+                    <div class="paint-placeholder" id="paint-source-placeholder">
+                        Start the camera or load an image.
+                    </div>
+                </div>
+            </article>
+
+            <article class="paint-card">
+                <div class="paint-card-header">
+                    <div>
+                        <span class="panel-label">K-Means Result</span>
+                        <strong>Representative colors</strong>
+                    </div>
+                </div>
+                <div class="paint-media-frame">
+                    <canvas id="paint-result-canvas"></canvas>
+                    <div class="paint-placeholder" id="paint-result-placeholder">
+                        Analyze an image to generate the reduced-color result.
+                    </div>
+                </div>
+            </article>
+        </section>
+
+        <section class="paint-palette-section">
+            <div class="paint-section-title">
+                <div>
+                    <span class="panel-label">Representative Colors &amp; Formulations</span>
+                    <p>Camera LAB is corrected to Nix-equivalent LAB before formulation.</p>
+                </div>
+            </div>
+            <div id="paint-palette-cards" class="paint-palette-cards">
+                <div class="paint-empty-state">No colors analyzed yet.</div>
+            </div>
+        </section>
+
+        <section class="manual-lab-card">
+            <div class="manual-lab-copy">
+                <span class="panel-label">Manual LAB Formulation</span>
+                <h2>Nix 3 / external LAB → Red, Yellow, Blue</h2>
+                <p>
+                    Manual LAB bypasses the camera-correction model and goes directly to the paint formulation model.
+                </p>
+            </div>
+            <div class="manual-lab-form">
+                <label>L* <input id="manual-L" type="number" step="0.01" /></label>
+                <label>a* <input id="manual-a" type="number" step="0.01" /></label>
+                <label>b* <input id="manual-b" type="number" step="0.01" /></label>
+                <button class="btn-action" id="manual-calculate">Calculate Paint Mix</button>
+            </div>
+            <div id="manual-result" class="manual-result">
+                Enter LAB values and the total paint amount above.
+            </div>
+        </section>
+
+        <section class="paint-note">
+            <strong>Calibration note:</strong>
+            uploaded images are most accurate when captured under conditions similar to the calibrated camera setup.
+            Manual LAB values from Nix do not need camera correction.
+        </section>
+    </main>
+
+
     <footer>
         <p>&copy; 2026 Emirates Skills. All rights reserved.</p>
     </footer>
@@ -163,5 +278,6 @@
 
     <script src="static/js/jspdf.umd.min.js"></script>
     <script src="static/js/main.js"></script>
+    <script src="static/js/formulation.js"></script>
 </body>
 </html>
