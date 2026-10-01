@@ -1439,6 +1439,9 @@
             Array.isArray(verification.measuredLab);
 
         if (!validVerification) {
+            if (verificationLInput) verificationLInput.value='';
+            if (verificationAInput) verificationAInput.value='';
+            if (verificationBInput) verificationBInput.value='';
             if (verificationStatusEl) {
                 verificationStatusEl.textContent='Enter the LAB values measured from the painted and scanned sample.';
                 verificationStatusEl.classList.remove('is-success','is-error');
