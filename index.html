@@ -293,6 +293,71 @@
         <p>&copy; 2026 Emirates Skills. All rights reserved.</p>
     </footer>
 
+    <!-- Formulation detail modal -->
+    <div class="modal-overlay formulation-modal-overlay" id="formulation-modal-overlay" hidden>
+        <div class="modal formulation-modal" id="formulation-modal" role="dialog" aria-modal="true" aria-labelledby="formulation-modal-title">
+            <button class="modal-close" id="formulation-modal-close" aria-label="Close formulation details">&times;</button>
+
+            <div class="formulation-modal-header">
+                <div class="formulation-modal-swatch" id="formulation-modal-swatch"></div>
+                <div>
+                    <span class="panel-label">Formulation Details</span>
+                    <h2 id="formulation-modal-title">Color</h2>
+                    <div class="formulation-modal-coverage" id="formulation-modal-coverage"></div>
+                </div>
+            </div>
+
+            <div class="formulation-modal-info-grid">
+                <div class="formulation-modal-info-card">
+                    <span>RGB</span>
+                    <strong id="formulation-modal-rgb">—</strong>
+                </div>
+                <div class="formulation-modal-info-card">
+                    <span>Camera LAB</span>
+                    <strong id="formulation-modal-camera-lab">—</strong>
+                </div>
+                <div class="formulation-modal-info-card">
+                    <span>Nix-equivalent LAB</span>
+                    <strong id="formulation-modal-nix-lab">—</strong>
+                </div>
+                <div class="formulation-modal-info-card">
+                    <span>Predicted ΔE00</span>
+                    <strong id="formulation-modal-deltae">—</strong>
+                </div>
+            </div>
+
+            <section class="formulation-modal-section">
+                <div class="formulation-modal-section-title">
+                    <span>Paint recipe</span>
+                    <strong id="formulation-modal-total">100 g total</strong>
+                </div>
+
+                <div class="formulation-modal-recipe-grid">
+                    <div class="formulation-modal-paint red">
+                        <span>Red</span>
+                        <strong id="formulation-modal-red-percent">—</strong>
+                        <b id="formulation-modal-red-grams">—</b>
+                    </div>
+                    <div class="formulation-modal-paint yellow">
+                        <span>Yellow</span>
+                        <strong id="formulation-modal-yellow-percent">—</strong>
+                        <b id="formulation-modal-yellow-grams">—</b>
+                    </div>
+                    <div class="formulation-modal-paint blue">
+                        <span>Blue</span>
+                        <strong id="formulation-modal-blue-percent">—</strong>
+                        <b id="formulation-modal-blue-grams">—</b>
+                    </div>
+                </div>
+            </section>
+
+            <div class="formulation-modal-source">
+                <span>Model source</span>
+                <strong id="formulation-modal-source">—</strong>
+            </div>
+        </div>
+    </div>
+
     <!-- About modal -->
     <div class="modal-overlay" id="modal-overlay" hidden>
         <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title">
