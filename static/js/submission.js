@@ -241,13 +241,21 @@
         if (analysisSettingsEl) {
             analysisSettingsEl.innerHTML = '';
             const settings = snapshot.settings || {};
+            const selectedClusters = Array.isArray(settings.selectedClusters)
+                ? settings.selectedClusters
+                : [];
+            const selectionLabel = selectedClusters.length
+                ? selectedClusters.map(index => `C${index + 1}`).join(', ')
+                : 'All';
+
             const items = [
                 ['Image', snapshot.sourceFileName || `${snapshot.imageWidth || '?'} × ${snapshot.imageHeight || '?'} px`],
                 ['Black L <', settings.blackThresholdL ?? '—'],
                 ['White L >', settings.whiteThresholdL ?? '—'],
                 ['Smoothing', settings.smoothingRadius ?? '—'],
                 ['Line', settings.lineThickness ?? '—'],
-                ['View', settings.contoursEnabled ? 'Contours' : 'Mosaic']
+                ['View', settings.contoursEnabled ? 'Contours' : 'Mosaic'],
+                ['Selection', selectionLabel]
             ];
 
             items.forEach(([label, value]) => {
