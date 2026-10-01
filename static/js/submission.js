@@ -33,6 +33,19 @@
     const paletteCountEl = document.getElementById('submission-palette-count');
     const paletteListEl = document.getElementById('submission-palette-list');
 
+    const capturePaintBtn = document.getElementById('submission-capture-paint');
+    const paintCaptureStatusEl = document.getElementById('submission-paint-capture-status');
+    const capturedPaintEl = document.getElementById('submission-captured-paint');
+    const paintSourceImageEl = document.getElementById('submission-paint-source-image');
+    const paintKmeansImageEl = document.getElementById('submission-paint-kmeans-image');
+    const paintSettingsEl = document.getElementById('submission-paint-settings');
+    const paintCameraSettingsEl = document.getElementById('submission-paint-camera-settings');
+    const paintFormulationCountEl = document.getElementById('submission-paint-formulation-count');
+    const paintFormulationListEl = document.getElementById('submission-paint-formulation-list');
+    const manualPaintCaptureEl = document.getElementById('submission-manual-paint-capture');
+    const manualPaintSwatchEl = document.getElementById('submission-manual-paint-swatch');
+    const manualPaintDataEl = document.getElementById('submission-manual-paint-data');
+
     if (!fab || !overlay || !modal) return;
 
     let currentDraft = null;
@@ -89,7 +102,8 @@
                     registrationOrImageName: '',
                     ppeConfirmation: ''
                 },
-                imageKMeansPalette: null
+                imageKMeansPalette: null,
+                paintFormulation: null
             }
         };
     }
@@ -358,6 +372,307 @@
         }
     }
 
+    function formatLabValues(values) {
+        if (!Array.isArray(values) || values.length < 3) return '—';
+        return `L* ${Number(values[0]).toFixed(2)} · a* ${Number(values[1]).toFixed(2)} · b* ${Number(values[2]).toFixed(2)}`;
+    }
+
+    function addAnalysisChip(container,label,value) {
+        if (!container) return;
+        const chip=document.createElement('div');
+        chip.className='submission-analysis-chip';
+
+        const labelEl=document.createElement('span');
+        labelEl.textContent=label;
+
+        const valueEl=document.createElement('strong');
+        valueEl.textContent=value === null || value === undefined || value === '' ? '—' : String(value);
+
+        chip.append(labelEl,valueEl);
+        container.appendChild(chip);
+    }
+
+    function clearCapturedPaintView() {
+        if (capturedPaintEl) capturedPaintEl.hidden=true;
+        if (paintSourceImageEl) paintSourceImageEl.removeAttribute('src');
+        if (paintKmeansImageEl) paintKmeansImageEl.removeAttribute('src');
+        if (paintSettingsEl) paintSettingsEl.innerHTML='';
+        if (paintCameraSettingsEl) paintCameraSettingsEl.innerHTML='';
+        if (paintFormulationListEl) paintFormulationListEl.innerHTML='';
+        if (paintFormulationCountEl) paintFormulationCountEl.textContent='';
+        if (manualPaintCaptureEl) manualPaintCaptureEl.hidden=true;
+        if (manualPaintDataEl) manualPaintDataEl.innerHTML='';
+        if (manualPaintSwatchEl) manualPaintSwatchEl.style.background='';
+    }
+
+    function renderCapturedPaint(snapshot) {
+        if (!snapshot || typeof snapshot !== 'object') {
+            clearCapturedPaintView();
+            if (paintCaptureStatusEl) {
+                paintCaptureStatusEl.textContent='No Paint Formulation result captured yet.';
+                paintCaptureStatusEl.classList.remove('is-success','is-error');
+            }
+            if (capturePaintBtn) capturePaintBtn.textContent='Capture from Paint Formulation';
+            return;
+        }
+
+        if (capturedPaintEl) capturedPaintEl.hidden=false;
+
+        if (paintSourceImageEl && snapshot.source && snapshot.source.image && snapshot.source.image.dataUrl) {
+            paintSourceImageEl.src=snapshot.source.image.dataUrl;
+        }
+        if (paintKmeansImageEl && snapshot.kMeans && snapshot.kMeans.resultImage && snapshot.kMeans.resultImage.dataUrl) {
+            paintKmeansImageEl.src=snapshot.kMeans.resultImage.dataUrl;
+        }
+
+        if (paintSettingsEl) {
+            paintSettingsEl.innerHTML='';
+            addAnalysisChip(paintSettingsEl,'Source',snapshot.source ? `${snapshot.source.kind || 'image'} · ${snapshot.source.name || ''}` : '—');
+            addAnalysisChip(paintSettingsEl,'K-Means',snapshot.kMeans ? snapshot.kMeans.colors : '—');
+            addAnalysisChip(paintSettingsEl,'Total paint',Number(snapshot.totalPaintGrams || 0).toFixed(0)+' g');
+            addAnalysisChip(paintSettingsEl,'Brightness',snapshot.imageAdjustments ? snapshot.imageAdjustments.brightness : '—');
+            addAnalysisChip(paintSettingsEl,'Contrast',snapshot.imageAdjustments ? snapshot.imageAdjustments.contrast : '—');
+        }
+
+        if (paintCameraSettingsEl) {
+            paintCameraSettingsEl.innerHTML='';
+            const camera=snapshot.camera || {};
+            const actual=camera.actualSettings || {};
+            const requested=camera.requestedControls || {};
+
+            if (camera.selectedCameraLabel) addAnalysisChip(paintCameraSettingsEl,'Camera',camera.selectedCameraLabel);
+            if (actual.width && actual.height) addAnalysisChip(paintCameraSettingsEl,'Resolution',`${actual.width} × ${actual.height}`);
+            if (actual.focusMode || requested.focusMode) {
+                addAnalysisChip(
+                    paintCameraSettingsEl,
+                    'Focus',
+                    [actual.focusMode || requested.focusMode, actual.focusDistance ?? requested.focusDistance]
+                        .filter(value=>value !== null && value !== undefined && value !== '')
+                        .join(' · ')
+                );
+            }
+            if (actual.exposureMode || requested.exposureMode) {
+                const exposureValue =
+                    actual.exposureTime ??
+                    actual.exposureCompensation ??
+                    (requested.exposureControl ? requested.exposureControl.value : null);
+                addAnalysisChip(
+                    paintCameraSettingsEl,
+                    'Exposure',
+                    [actual.exposureMode || requested.exposureMode, exposureValue]
+                        .filter(value=>value !== null && value !== undefined && value !== '')
+                        .join(' · ')
+                );
+            }
+            if (actual.whiteBalanceMode || requested.whiteBalanceMode || actual.colorTemperature || requested.colorTemperature) {
+                addAnalysisChip(
+                    paintCameraSettingsEl,
+                    'White balance',
+                    [
+                        actual.whiteBalanceMode || requested.whiteBalanceMode,
+                        actual.colorTemperature ?? requested.colorTemperature
+                    ]
+                        .filter(value=>value !== null && value !== undefined && value !== '')
+                        .join(' · ')
+                );
+            }
+        }
+
+        const formulations=Array.isArray(snapshot.formulations) ? snapshot.formulations : [];
+        if (paintFormulationCountEl) {
+            paintFormulationCountEl.textContent=`${formulations.length} captured formulations`;
+        }
+
+        if (paintFormulationListEl) {
+            paintFormulationListEl.innerHTML='';
+
+            formulations.forEach((row,index)=>{
+                const card=document.createElement('div');
+                card.className='submission-paint-formulation-card';
+
+                const header=document.createElement('div');
+                header.className='submission-paint-formulation-header';
+
+                const swatch=document.createElement('div');
+                swatch.className='submission-palette-swatch submission-paint-formulation-swatch';
+                const rgb=Array.isArray(row.rgb) ? row.rgb : [0,0,0];
+                swatch.style.background=`rgb(${rgb[0]}, ${rgb[1]}, ${rgb[2]})`;
+
+                const title=document.createElement('div');
+                title.className='submission-paint-formulation-title';
+                const titleStrong=document.createElement('strong');
+                titleStrong.textContent=row.label || `Color ${index+1}`;
+                const titleSmall=document.createElement('span');
+                titleSmall.textContent=`${Number(row.coveragePercent || 0).toFixed(1)}% coverage · RGB ${rgb.join(', ')}`;
+                title.append(titleStrong,titleSmall);
+
+                const delta=document.createElement('div');
+                delta.className='submission-paint-delta';
+                delta.textContent=`ΔE00 ${Number(row.formulation?.predictedDeltaE00 || 0).toFixed(2)}`;
+
+                header.append(swatch,title,delta);
+
+                const labs=document.createElement('div');
+                labs.className='submission-paint-labs';
+                const cameraLab=document.createElement('div');
+                cameraLab.innerHTML='<span>Camera LAB</span>';
+                const cameraLabStrong=document.createElement('strong');
+                cameraLabStrong.textContent=formatLabValues(row.cameraLab);
+                cameraLab.appendChild(cameraLabStrong);
+
+                const nixLab=document.createElement('div');
+                nixLab.innerHTML='<span>Nix-equivalent LAB</span>';
+                const nixLabStrong=document.createElement('strong');
+                nixLabStrong.textContent=formatLabValues(row.nixEquivalentLab);
+                nixLab.appendChild(nixLabStrong);
+
+                const predictedLab=document.createElement('div');
+                predictedLab.innerHTML='<span>Predicted LAB</span>';
+                const predictedLabStrong=document.createElement('strong');
+                predictedLabStrong.textContent=formatLabValues(row.formulation?.predictedLab);
+                predictedLab.appendChild(predictedLabStrong);
+                labs.append(cameraLab,nixLab,predictedLab);
+
+                const recipe=document.createElement('div');
+                recipe.className='submission-paint-recipe';
+                const percentages=row.formulation?.recipePercent || {};
+                const grams=row.formulation?.grams || {};
+                [
+                    ['Red',percentages.red,grams.red],
+                    ['Yellow',percentages.yellow,grams.yellow],
+                    ['Blue',percentages.blue,grams.blue]
+                ].forEach(([name,percent,weight])=>{
+                    const item=document.createElement('div');
+                    const nameEl=document.createElement('span');
+                    nameEl.textContent=name;
+                    const pctEl=document.createElement('strong');
+                    pctEl.textContent=`${Number(percent || 0).toFixed(1)}%`;
+                    const gramsEl=document.createElement('b');
+                    gramsEl.textContent=`${Number(weight || 0).toFixed(2)} g`;
+                    item.append(nameEl,pctEl,gramsEl);
+                    recipe.appendChild(item);
+                });
+
+                const source=document.createElement('div');
+                source.className='submission-paint-model-source';
+                source.textContent=row.formulation?.source || '';
+
+                card.append(header,labs,recipe,source);
+                paintFormulationListEl.appendChild(card);
+            });
+        }
+
+        const manual=snapshot.manualLab;
+        if (manual && manual.formulation) {
+            if (manualPaintCaptureEl) manualPaintCaptureEl.hidden=false;
+            if (manualPaintSwatchEl && Array.isArray(manual.targetPreviewRgb)) {
+                manualPaintSwatchEl.style.background=
+                    `rgb(${manual.targetPreviewRgb[0]}, ${manual.targetPreviewRgb[1]}, ${manual.targetPreviewRgb[2]})`;
+            }
+
+            if (manualPaintDataEl) {
+                manualPaintDataEl.innerHTML='';
+
+                const target=document.createElement('div');
+                target.className='submission-manual-paint-line';
+                target.innerHTML='<span>Target LAB</span>';
+                const targetStrong=document.createElement('strong');
+                targetStrong.textContent=formatLabValues(manual.targetLab);
+                target.appendChild(targetStrong);
+
+                const predicted=document.createElement('div');
+                predicted.className='submission-manual-paint-line';
+                predicted.innerHTML='<span>Predicted LAB</span>';
+                const predictedStrong=document.createElement('strong');
+                predictedStrong.textContent=formatLabValues(manual.formulation.predictedLab);
+                predicted.appendChild(predictedStrong);
+
+                const delta=document.createElement('div');
+                delta.className='submission-manual-paint-line';
+                delta.innerHTML='<span>Predicted ΔE00</span>';
+                const deltaStrong=document.createElement('strong');
+                deltaStrong.textContent=Number(manual.formulation.predictedDeltaE00 || 0).toFixed(2);
+                delta.appendChild(deltaStrong);
+
+                const recipe=document.createElement('div');
+                recipe.className='submission-paint-recipe compact';
+                const percentages=manual.formulation.recipePercent || {};
+                const weights=manual.formulation.grams || {};
+                [
+                    ['Red',percentages.red,weights.red],
+                    ['Yellow',percentages.yellow,weights.yellow],
+                    ['Blue',percentages.blue,weights.blue]
+                ].forEach(([name,percent,weight])=>{
+                    const item=document.createElement('div');
+                    const nameEl=document.createElement('span');
+                    nameEl.textContent=name;
+                    const pctEl=document.createElement('strong');
+                    pctEl.textContent=`${Number(percent || 0).toFixed(1)}%`;
+                    const gramsEl=document.createElement('b');
+                    gramsEl.textContent=`${Number(weight || 0).toFixed(2)} g`;
+                    item.append(nameEl,pctEl,gramsEl);
+                    recipe.appendChild(item);
+                });
+
+                const source=document.createElement('div');
+                source.className='submission-paint-model-source';
+                source.textContent=manual.formulation.source || '';
+
+                manualPaintDataEl.append(target,predicted,delta,recipe,source);
+            }
+        } else if (manualPaintCaptureEl) {
+            manualPaintCaptureEl.hidden=true;
+        }
+
+        const capturedAt=snapshot.capturedAt ? new Date(snapshot.capturedAt) : null;
+        if (paintCaptureStatusEl) {
+            paintCaptureStatusEl.textContent=capturedAt && !Number.isNaN(capturedAt.getTime())
+                ? `Captured from Paint Formulation · ${capturedAt.toLocaleString()}`
+                : 'Captured from Paint Formulation.';
+            paintCaptureStatusEl.classList.remove('is-error');
+            paintCaptureStatusEl.classList.add('is-success');
+        }
+
+        if (capturePaintBtn) capturePaintBtn.textContent='Recapture from Paint Formulation';
+    }
+
+    function capturePaintFormulation() {
+        if (!currentDraft) return;
+
+        const paintApi=window.SkillosaicPaint;
+        if (!paintApi || typeof paintApi.getSubmissionSnapshot!=='function') {
+            paintCaptureStatusEl.textContent='Paint Formulation capture is not available.';
+            paintCaptureStatusEl.classList.remove('is-success');
+            paintCaptureStatusEl.classList.add('is-error');
+            return;
+        }
+
+        const snapshot=paintApi.getSubmissionSnapshot();
+        if (!snapshot) {
+            paintCaptureStatusEl.textContent=
+                'No completed Paint Formulation analysis found. Analyze an image or camera capture first, then capture again.';
+            paintCaptureStatusEl.classList.remove('is-success');
+            paintCaptureStatusEl.classList.add('is-error');
+            return;
+        }
+
+        syncIdentificationToDraft();
+        currentDraft.fields=currentDraft.fields && typeof currentDraft.fields==='object'
+            ? currentDraft.fields
+            : {};
+        currentDraft.fields.paintFormulation=snapshot;
+
+        const saved=saveCurrentDraft();
+        renderCapturedPaint(snapshot);
+
+        if (!saved) {
+            paintCaptureStatusEl.textContent=
+                'The Paint Formulation result was captured in memory, but the browser could not save it to local storage.';
+            paintCaptureStatusEl.classList.remove('is-success');
+            paintCaptureStatusEl.classList.add('is-error');
+        }
+    }
+
     function renderDraft(draft, created) {
         currentDraft = draft;
         currentTokenEl.textContent = draft.token;
@@ -372,6 +687,11 @@
             ? draft.fields.imageKMeansPalette
             : null;
         renderCapturedAnalysis(imageKMeansPalette);
+
+        const paintFormulation = draft.fields && draft.fields.paintFormulation
+            ? draft.fields.paintFormulation
+            : null;
+        renderCapturedPaint(paintFormulation);
 
         tokenStatus.textContent = created
             ? 'New local submission draft created.'
@@ -517,6 +837,10 @@
 
     if (captureMosaicBtn) {
         captureMosaicBtn.addEventListener('click', captureMosaicAnalysis);
+    }
+
+    if (capturePaintBtn) {
+        capturePaintBtn.addEventListener('click', capturePaintFormulation);
     }
 
     saveDraftBtn.addEventListener('click', () => {

@@ -589,6 +589,62 @@
                     </div>
                 </section>
 
+                <section class="submission-paint-formulation-section" aria-labelledby="submission-paint-formulation-title">
+                    <div class="submission-section-heading submission-capture-heading">
+                        <div>
+                            <span class="panel-label">Task Step 3</span>
+                            <h4 id="submission-paint-formulation-title">3 · Paint Formulation processing</h4>
+                            <p>Capture the complete current processing state directly from the Paint Formulation tab.</p>
+                        </div>
+                        <button class="btn-action submission-capture-btn" id="submission-capture-paint" type="button">
+                            Capture from Paint Formulation
+                        </button>
+                    </div>
+
+                    <div class="submission-capture-status" id="submission-paint-capture-status" aria-live="polite">
+                        No Paint Formulation result captured yet.
+                    </div>
+
+                    <div class="submission-captured-paint" id="submission-captured-paint" hidden>
+                        <div class="submission-analysis-images">
+                            <figure>
+                                <div class="submission-analysis-image-frame">
+                                    <img id="submission-paint-source-image" alt="Captured Paint Formulation source image" />
+                                </div>
+                                <figcaption>Input used for formulation</figcaption>
+                            </figure>
+                            <figure>
+                                <div class="submission-analysis-image-frame">
+                                    <img id="submission-paint-kmeans-image" alt="Captured Paint Formulation K-Means result" />
+                                </div>
+                                <figcaption>Paint Formulation K-Means result</figcaption>
+                            </figure>
+                        </div>
+
+                        <div class="submission-analysis-settings" id="submission-paint-settings"></div>
+                        <div class="submission-analysis-settings submission-camera-settings" id="submission-paint-camera-settings"></div>
+
+                        <div class="submission-paint-results-block">
+                            <div class="submission-palette-heading">
+                                <strong>Color formulations</strong>
+                                <span id="submission-paint-formulation-count"></span>
+                            </div>
+                            <div class="submission-paint-formulation-list" id="submission-paint-formulation-list"></div>
+                        </div>
+
+                        <div class="submission-manual-capture" id="submission-manual-paint-capture" hidden>
+                            <div class="submission-palette-heading">
+                                <strong>Manual LAB formulation</strong>
+                                <span>Captured calculation</span>
+                            </div>
+                            <div class="submission-manual-capture-body">
+                                <div class="submission-manual-capture-swatch" id="submission-manual-paint-swatch"></div>
+                                <div class="submission-manual-capture-data" id="submission-manual-paint-data"></div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
                 <div class="submission-actions">
                     <button class="btn-action" id="submission-save-draft" type="button">Save Draft</button>
                 </div>
