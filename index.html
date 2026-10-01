@@ -863,14 +863,15 @@
                     </div>
 
                     <div class="submission-closing-controls">
-                        <label class="btn-action submission-closing-upload-btn" for="submission-closing-file">
+                        <button class="btn-action submission-closing-upload-btn" id="submission-closing-upload-open" type="button">
                             Attach workspace image
-                        </label>
+                        </button>
                         <input
                             id="submission-closing-file"
                             class="submission-closing-file-input"
                             type="file"
                             accept="image/*"
+                            hidden
                         />
                         <button class="btn-action" id="submission-closing-camera-open" type="button">
                             Use Camera
