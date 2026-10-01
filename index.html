@@ -476,12 +476,72 @@
                     <div class="submission-save-state" id="submission-save-state">Saved locally</div>
                 </div>
 
-                <div class="submission-placeholder">
-                    <strong>Submission fields will be added here.</strong>
-                    <p>
-                        The storage structure and token-based draft loading are already prepared for the form details you provide next.
-                    </p>
-                </div>
+                <section class="submission-identification-section" aria-labelledby="submission-identification-title">
+                    <div class="submission-section-heading">
+                        <div>
+                            <span class="panel-label">Task Step 1</span>
+                            <h4 id="submission-identification-title">1 · Identification</h4>
+                            <p>Fill in before starting. These details will be stored with this token.</p>
+                        </div>
+                    </div>
+
+                    <div class="submission-identification-grid">
+                        <label class="submission-field">
+                            <span class="submission-question-line"><b>Q1</b><strong>Station number</strong></span>
+                            <select id="submission-station-number">
+                                <option value="">Select station</option>
+                                <option value="Station 1">Station 1</option>
+                                <option value="Station 2">Station 2</option>
+                                <option value="Station 3">Station 3</option>
+                                <option value="Station 4">Station 4</option>
+                                <option value="Station 5">Station 5</option>
+                                <option value="Station 6">Station 6</option>
+                                <option value="Station 7">Station 7</option>
+                                <option value="Station 8">Station 8</option>
+                                <option value="Station 9">Station 9</option>
+                                <option value="Station 10">Station 10</option>
+                            </select>
+                        </label>
+
+                        <label class="submission-field">
+                            <span class="submission-question-line"><b>Q2</b><strong>Full name</strong></span>
+                            <input id="submission-full-name" type="text" autocomplete="name" placeholder="Participant full name" />
+                        </label>
+
+                        <label class="submission-field">
+                            <span class="submission-question-line"><b>Q3</b><strong>ATS school</strong></span>
+                            <select id="submission-ats-school">
+                                <option value="">Select school</option>
+                                <option value="ATS Baniyas">ATS Baniyas</option>
+                                <option value="ATS Abu Dhabi">ATS Abu Dhabi</option>
+                                <option value="Other">Other</option>
+                            </select>
+                        </label>
+
+                        <label class="submission-field">
+                            <span class="submission-question-line"><b>Q4</b><strong>Date</strong></span>
+                            <input id="submission-date" type="date" />
+                        </label>
+
+                        <label class="submission-field submission-field-wide">
+                            <span class="submission-question-line">
+                                <b>Q5</b>
+                                <strong>Registration number (1–10) or image name</strong>
+                            </span>
+                            <input id="submission-registration-image" type="text" placeholder="e.g. 05 or image file name" />
+                            <small>Loads the image for step 2 and lets the Expert confirm the right image was used.</small>
+                        </label>
+
+                        <div class="submission-field submission-field-wide">
+                            <span class="submission-question-line"><b>Q6</b><strong>PPE confirmation</strong></span>
+                            <div class="submission-segmented" role="group" aria-label="PPE confirmation">
+                                <button type="button" id="submission-ppe-yes" data-value="yes" aria-pressed="false">Yes</button>
+                                <button type="button" id="submission-ppe-no" data-value="no" aria-pressed="false">No</button>
+                            </div>
+                            <small>I am wearing a lab coat and safety glasses.</small>
+                        </div>
+                    </div>
+                </section>
 
                 <div class="submission-actions">
                     <button class="btn-action" id="submission-save-draft" type="button">Save Draft</button>
