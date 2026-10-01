@@ -2811,3 +2811,219 @@ footer {
         grid-column: auto;
     }
 }
+
+
+/* -------------------------------------------------------------------------- */
+/* Submission step 2: Image & K-Means palette capture                          */
+/* -------------------------------------------------------------------------- */
+
+.submission-image-palette-section {
+    margin-top: 1rem;
+    padding: 1rem;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    background: #fbfcfe;
+}
+
+.submission-capture-heading {
+    align-items: center;
+}
+
+.submission-capture-btn {
+    flex-shrink: 0;
+    white-space: nowrap;
+}
+
+.submission-capture-status {
+    min-height: 1.15rem;
+    margin-top: -0.15rem;
+    margin-bottom: 0.75rem;
+    color: var(--muted);
+    font-size: 0.76rem;
+    font-weight: 700;
+}
+
+.submission-capture-status.is-success {
+    color: #1f7a4d;
+}
+
+.submission-capture-status.is-error {
+    color: #a63d34;
+}
+
+.submission-captured-analysis {
+    display: grid;
+    gap: 0.9rem;
+}
+
+.submission-analysis-images {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.75rem;
+}
+
+.submission-analysis-images figure {
+    min-width: 0;
+    margin: 0;
+}
+
+.submission-analysis-image-frame {
+    height: 190px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: #111b25;
+}
+
+.submission-analysis-image-frame img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+}
+
+.submission-analysis-images figcaption {
+    margin-top: 0.35rem;
+    color: var(--muted);
+    font-size: 0.72rem;
+    font-weight: 700;
+}
+
+.submission-analysis-meta {
+    display: grid;
+    gap: 0.8rem;
+}
+
+.submission-analysis-settings {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+}
+
+.submission-analysis-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    min-height: 30px;
+    padding: 0.25rem 0.5rem;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    background: #fff;
+}
+
+.submission-analysis-chip span {
+    color: var(--muted);
+    font-size: 0.65rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.submission-analysis-chip strong {
+    color: var(--primary);
+    font-size: 0.72rem;
+}
+
+.submission-palette-block {
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    overflow: hidden;
+    background: #fff;
+}
+
+.submission-palette-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    padding: 0.6rem 0.7rem;
+    border-bottom: 1px solid var(--border);
+    background: #f2f7fb;
+}
+
+.submission-palette-heading strong {
+    color: var(--primary);
+    font-size: 0.78rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.submission-palette-heading span {
+    color: var(--muted);
+    font-size: 0.7rem;
+    font-weight: 700;
+}
+
+.submission-palette-list {
+    display: grid;
+}
+
+.submission-palette-row {
+    display: grid;
+    grid-template-columns: 38px minmax(80px, 0.7fr) minmax(170px, 1.5fr) 58px;
+    align-items: center;
+    gap: 0.55rem;
+    min-height: 42px;
+    padding: 0.4rem 0.65rem;
+    border-bottom: 1px solid #edf1f5;
+}
+
+.submission-palette-row:last-child {
+    border-bottom: 0;
+}
+
+.submission-palette-swatch {
+    width: 34px;
+    height: 26px;
+    border: 1px solid #c9d1dc;
+    border-radius: 6px;
+}
+
+.submission-palette-name {
+    color: var(--primary);
+    font-size: 0.75rem;
+    font-weight: 700;
+}
+
+.submission-palette-lab {
+    color: var(--text);
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 0.72rem;
+}
+
+.submission-palette-coverage {
+    color: var(--muted);
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-align: right;
+}
+
+@media (max-width: 700px) {
+    .submission-capture-heading {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .submission-capture-btn {
+        width: 100%;
+    }
+
+    .submission-analysis-images {
+        grid-template-columns: 1fr;
+    }
+
+    .submission-analysis-image-frame {
+        height: 180px;
+    }
+
+    .submission-palette-row {
+        grid-template-columns: 34px 1fr 54px;
+    }
+
+    .submission-palette-lab {
+        grid-column: 2 / -1;
+        padding-bottom: 0.2rem;
+    }
+}
