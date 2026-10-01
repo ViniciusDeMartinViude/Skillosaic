@@ -29,6 +29,7 @@
     const startCameraBtn = document.getElementById('paint-start-camera');
     const captureBtn = document.getElementById('paint-capture');
     const fileInput = document.getElementById('paint-file-input');
+    const cameraSelect = document.getElementById('paint-camera-select');
     const kSelect = document.getElementById('paint-k');
     const totalGramsInput = document.getElementById('paint-total-grams');
     const statusEl = document.getElementById('paint-status');
@@ -565,20 +566,106 @@
         video.style.filter=`brightness(${Math.max(0,brightness)}%) contrast(${Math.max(0,contrast)}%)`;
     }
 
+    async function refreshCameraDevices(preferredDeviceId = null) {
+        if (!cameraSelect) return;
+
+        if (!navigator.mediaDevices || typeof navigator.mediaDevices.enumerateDevices !== 'function') {
+            cameraSelect.innerHTML = '<option value="">Default camera</option>';
+            cameraSelect.disabled = true;
+            return;
+        }
+
+        try {
+            const devices = await navigator.mediaDevices.enumerateDevices();
+            const cameras = devices.filter(device => device.kind === 'videoinput');
+            const previous = preferredDeviceId || cameraSelect.value || '';
+
+            cameraSelect.innerHTML = '';
+
+            if (!cameras.length) {
+                const option = document.createElement('option');
+                option.value = '';
+                option.textContent = 'No camera detected';
+                cameraSelect.appendChild(option);
+                cameraSelect.disabled = true;
+                return;
+            }
+
+            cameras.forEach((camera, index) => {
+                const option = document.createElement('option');
+                option.value = camera.deviceId;
+                option.textContent = camera.label || `Camera ${index + 1}`;
+                cameraSelect.appendChild(option);
+            });
+
+            cameraSelect.disabled = false;
+
+            const matchingOption = Array.from(cameraSelect.options)
+                .find(option => option.value === previous);
+
+            if (matchingOption) {
+                cameraSelect.value = previous;
+            } else if (preferredDeviceId) {
+                const currentOption = Array.from(cameraSelect.options)
+                    .find(option => option.value === preferredDeviceId);
+                if (currentOption) cameraSelect.value = preferredDeviceId;
+            }
+        } catch (err) {
+            console.warn('[Skillosaic] Could not enumerate cameras:', err);
+            cameraSelect.innerHTML = '<option value="">Default camera</option>';
+            cameraSelect.disabled = false;
+        }
+    }
+
     async function startCamera() {
         try {
-            if (cameraStream) cameraStream.getTracks().forEach(t=>t.stop());
+            if (!navigator.mediaDevices || typeof navigator.mediaDevices.getUserMedia !== 'function') {
+                throw new Error('Camera access is not supported by this browser.');
+            }
+
+            const selectedDeviceId = cameraSelect && !cameraSelect.disabled
+                ? cameraSelect.value
+                : '';
+
+            if (cameraStream) {
+                cameraStream.getTracks().forEach(track => track.stop());
+                cameraStream = null;
+                cameraTrack = null;
+            }
+
             clearNativeCameraControls('Detecting camera capabilities…');
+
+            const videoConstraints = {
+                width: {ideal:1280},
+                height: {ideal:720}
+            };
+
+            if (selectedDeviceId) {
+                videoConstraints.deviceId = {exact:selectedDeviceId};
+            }
+
             cameraStream=await navigator.mediaDevices.getUserMedia({
-                video:{width:{ideal:1280},height:{ideal:720}}, audio:false
+                video:videoConstraints,
+                audio:false
             });
+
             cameraTrack=cameraStream.getVideoTracks()[0] || null;
             video.srcObject=cameraStream;
             video.hidden=false;
             sourceCanvas.hidden=true;
             sourcePlaceholder.style.display='none';
             captureBtn.disabled=false;
-            sourceLabel.textContent='Live camera';
+
+            const settings = cameraTrack && cameraTrack.getSettings
+                ? cameraTrack.getSettings()
+                : {};
+            await refreshCameraDevices(settings.deviceId || selectedDeviceId || null);
+
+            const selectedLabel = cameraSelect && cameraSelect.selectedOptions.length
+                ? cameraSelect.selectedOptions[0].textContent
+                : 'Live camera';
+
+            sourceLabel.textContent=selectedLabel || 'Live camera';
             statusEl.textContent='Camera ready';
             updateVideoFilter();
             await configureCameraControls();
@@ -750,6 +837,22 @@
         statusEl.textContent='Controls reset';
     });
 
+    cameraSelect.addEventListener('change', async () => {
+        if (cameraStream) {
+            statusEl.textContent='Switching camera…';
+            await startCamera();
+        }
+    });
+
+    if (navigator.mediaDevices && typeof navigator.mediaDevices.addEventListener === 'function') {
+        navigator.mediaDevices.addEventListener('devicechange', async () => {
+            const currentDeviceId = cameraTrack && cameraTrack.getSettings
+                ? cameraTrack.getSettings().deviceId
+                : cameraSelect.value;
+            await refreshCameraDevices(currentDeviceId || null);
+        });
+    }
+
     startCameraBtn.addEventListener('click',startCamera);
     captureBtn.addEventListener('click',async()=>{
         let canvas;
@@ -797,6 +900,7 @@
     function resizeVisibleCanvases() {}
 
     clearNativeCameraControls();
+    refreshCameraDevices();
 
     window.addEventListener('beforeunload',()=>{
         if (cameraStream) cameraStream.getTracks().forEach(t=>t.stop());
