@@ -3027,3 +3027,225 @@ footer {
         padding-bottom: 0.2rem;
     }
 }
+
+
+/* -------------------------------------------------------------------------- */
+/* Submission step 3: Paint Formulation capture                                */
+/* -------------------------------------------------------------------------- */
+
+.submission-paint-formulation-section {
+    margin-top: 1rem;
+    padding: 1rem;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    background: #fbfcfe;
+}
+
+.submission-captured-paint {
+    display: grid;
+    gap: 0.9rem;
+}
+
+.submission-camera-settings {
+    padding-top: 0.1rem;
+}
+
+.submission-paint-results-block,
+.submission-manual-capture {
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    overflow: hidden;
+    background: #fff;
+}
+
+.submission-paint-formulation-list {
+    display: grid;
+    gap: 0;
+}
+
+.submission-paint-formulation-card {
+    display: grid;
+    gap: 0.65rem;
+    padding: 0.75rem;
+    border-bottom: 1px solid #edf1f5;
+}
+
+.submission-paint-formulation-card:last-child {
+    border-bottom: 0;
+}
+
+.submission-paint-formulation-header {
+    display: grid;
+    grid-template-columns: 42px minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 0.65rem;
+}
+
+.submission-paint-formulation-swatch {
+    width: 40px;
+    height: 34px;
+}
+
+.submission-paint-formulation-title {
+    min-width: 0;
+}
+
+.submission-paint-formulation-title strong,
+.submission-paint-formulation-title span {
+    display: block;
+}
+
+.submission-paint-formulation-title strong {
+    color: var(--primary);
+    font-size: 0.8rem;
+}
+
+.submission-paint-formulation-title span {
+    margin-top: 0.08rem;
+    color: var(--muted);
+    font-size: 0.68rem;
+}
+
+.submission-paint-delta {
+    padding: 0.3rem 0.5rem;
+    border-radius: 999px;
+    background: #eef4fb;
+    color: var(--primary);
+    font-size: 0.72rem;
+    font-weight: 800;
+    white-space: nowrap;
+}
+
+.submission-paint-labs {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.45rem;
+}
+
+.submission-paint-labs > div {
+    padding: 0.45rem 0.5rem;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: #fafbfd;
+    min-width: 0;
+}
+
+.submission-paint-labs span,
+.submission-manual-paint-line span {
+    display: block;
+    color: var(--muted);
+    font-size: 0.63rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.submission-paint-labs strong,
+.submission-manual-paint-line strong {
+    display: block;
+    margin-top: 0.12rem;
+    color: var(--primary);
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 0.7rem;
+    line-height: 1.3;
+}
+
+.submission-paint-recipe {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.4rem;
+}
+
+.submission-paint-recipe > div {
+    padding: 0.45rem;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    text-align: center;
+    background: #fff;
+}
+
+.submission-paint-recipe span,
+.submission-paint-recipe strong,
+.submission-paint-recipe b {
+    display: block;
+}
+
+.submission-paint-recipe span {
+    color: var(--muted);
+    font-size: 0.64rem;
+}
+
+.submission-paint-recipe strong {
+    margin-top: 0.08rem;
+    color: var(--primary);
+    font-size: 0.82rem;
+}
+
+.submission-paint-recipe b {
+    margin-top: 0.08rem;
+    color: var(--text);
+    font-size: 0.72rem;
+}
+
+.submission-paint-model-source {
+    color: var(--muted);
+    font-size: 0.66rem;
+    line-height: 1.35;
+}
+
+.submission-manual-capture-body {
+    display: grid;
+    grid-template-columns: 78px minmax(0, 1fr);
+    gap: 0.8rem;
+    align-items: start;
+    padding: 0.75rem;
+}
+
+.submission-manual-capture-swatch {
+    width: 78px;
+    height: 78px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: #eef2f6;
+}
+
+.submission-manual-capture-data {
+    display: grid;
+    gap: 0.45rem;
+    min-width: 0;
+}
+
+.submission-manual-paint-line {
+    padding: 0.4rem 0.5rem;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: #fafbfd;
+}
+
+.submission-paint-recipe.compact {
+    margin-top: 0.05rem;
+}
+
+@media (max-width: 700px) {
+    .submission-paint-formulation-header {
+        grid-template-columns: 38px minmax(0, 1fr);
+    }
+
+    .submission-paint-delta {
+        grid-column: 2;
+        justify-self: start;
+    }
+
+    .submission-paint-labs {
+        grid-template-columns: 1fr;
+    }
+
+    .submission-manual-capture-body {
+        grid-template-columns: 64px minmax(0, 1fr);
+    }
+
+    .submission-manual-capture-swatch {
+        width: 64px;
+        height: 64px;
+    }
+}
