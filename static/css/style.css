@@ -3536,3 +3536,433 @@ footer {
         flex-direction: column;
     }
 }
+
+
+/* -------------------------------------------------------------------------- */
+/* Submission step 5: Weighing + Expert confirmation                           */
+/* -------------------------------------------------------------------------- */
+
+.submission-weighing-section {
+    margin-top: 1rem;
+    padding: 1rem;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    background: #fbfcfe;
+}
+
+.submission-weighing-target {
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+    margin-bottom: 0.75rem;
+    padding: 0.65rem;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: #fff;
+}
+
+.submission-weighing-target-swatch {
+    width: 56px;
+    height: 46px;
+    flex-shrink: 0;
+    border: 1px solid #c9d1dc;
+    border-radius: 8px;
+    background: #eef2f6;
+}
+
+.submission-weighing-target span,
+.submission-weighing-target strong,
+.submission-weighing-target small {
+    display: block;
+}
+
+.submission-weighing-target span {
+    color: var(--muted);
+    font-size: 0.62rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.submission-weighing-target strong {
+    margin-top: 0.06rem;
+    color: var(--primary);
+    font-size: 0.9rem;
+}
+
+.submission-weighing-target small {
+    margin-top: 0.08rem;
+    color: var(--muted);
+    font-size: 0.7rem;
+}
+
+.submission-weighing-paints {
+    display: grid;
+    gap: 0.55rem;
+}
+
+.submission-weighing-paint {
+    display: grid;
+    grid-template-columns: 12px minmax(130px, 1fr) minmax(210px, 0.9fr);
+    gap: 0.65rem;
+    align-items: center;
+    padding: 0.65rem 0.7rem;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: #fff;
+}
+
+.submission-weighing-paint-mark {
+    width: 10px;
+    height: 48px;
+    border-radius: 999px;
+    background: #6b7280;
+}
+
+.submission-weighing-paint.red .submission-weighing-paint-mark {
+    background: #b33838;
+}
+
+.submission-weighing-paint.yellow .submission-weighing-paint-mark {
+    background: #d5a600;
+}
+
+.submission-weighing-paint.blue .submission-weighing-paint-mark {
+    background: #275fa5;
+}
+
+.submission-weighing-paint-info strong,
+.submission-weighing-paint-info span {
+    display: block;
+}
+
+.submission-weighing-paint-info strong {
+    color: var(--primary);
+    font-size: 0.82rem;
+}
+
+.submission-weighing-paint-info span {
+    margin-top: 0.1rem;
+    color: var(--muted);
+    font-size: 0.7rem;
+}
+
+.submission-weighing-code-field {
+    display: grid;
+    grid-template-columns: auto minmax(105px, 1fr);
+    column-gap: 0.5rem;
+    row-gap: 0.16rem;
+    align-items: center;
+}
+
+.submission-weighing-code-field > span {
+    color: var(--muted);
+    font-size: 0.68rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.submission-weighing-code-field input {
+    width: 100%;
+    height: 40px;
+    padding: 0 0.65rem;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: #fff;
+    color: var(--primary);
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 0.95rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.submission-weighing-code-field input:focus {
+    outline: 2px solid rgba(42,107,168,0.2);
+    border-color: #2a6ba8;
+}
+
+.submission-weighing-code-field input.is-valid {
+    border-color: #4f9a6a;
+    background: #f6fbf8;
+}
+
+.submission-weighing-code-field input.is-invalid {
+    border-color: #b75a4c;
+    background: #fff8f6;
+}
+
+.submission-weighing-code-field input:disabled {
+    background: #eef2f6;
+    color: #566273;
+    cursor: not-allowed;
+}
+
+.submission-weighing-code-validation {
+    grid-column: 2;
+    min-height: 1em;
+    color: var(--muted);
+    font-size: 0.64rem;
+}
+
+.submission-weighing-code-field input.is-valid + .submission-weighing-code-validation {
+    color: #327149;
+}
+
+.submission-weighing-code-field input.is-invalid + .submission-weighing-code-validation {
+    color: #a63d34;
+}
+
+.submission-weighing-code-help {
+    margin-top: 0.55rem;
+    padding: 0.5rem 0.6rem;
+    border-radius: 8px;
+    background: #f2f5f8;
+    color: var(--muted);
+    font-size: 0.7rem;
+}
+
+.submission-weighing-code-help strong {
+    color: var(--primary);
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    letter-spacing: 0.06em;
+}
+
+.submission-weighing-confirmation {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-top: 0.75rem;
+    padding: 0.75rem;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: #f8fafc;
+}
+
+.submission-weighing-confirmation-copy span,
+.submission-weighing-confirmation-copy strong,
+.submission-weighing-confirmation-copy small {
+    display: block;
+}
+
+.submission-weighing-confirmation-copy span {
+    color: var(--muted);
+    font-size: 0.64rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.submission-weighing-confirmation-copy strong {
+    margin-top: 0.08rem;
+    color: var(--primary);
+    font-size: 0.82rem;
+}
+
+.submission-weighing-confirmation-copy strong.status-confirmed {
+    color: #2f7650;
+}
+
+.submission-weighing-confirmation-copy strong.status-rejected {
+    color: #a63d34;
+}
+
+.submission-weighing-confirmation-copy strong.status-pending {
+    color: #8a6400;
+}
+
+.submission-weighing-confirmation-copy small {
+    max-width: 520px;
+    margin-top: 0.1rem;
+    color: var(--muted);
+    font-size: 0.67rem;
+    line-height: 1.35;
+}
+
+.expert-weighing-modal-overlay {
+    z-index: 390;
+    background: rgba(0,35,64,0.72);
+}
+
+.expert-weighing-modal {
+    width: min(700px,94vw);
+    max-width: 700px;
+    padding: 1.35rem;
+    border-top: 6px solid #2a6ba8;
+}
+
+.expert-weighing-modal-header {
+    padding-right: 2.5rem;
+}
+
+.expert-weighing-modal-header h2 {
+    margin: 0.12rem 0 0.25rem;
+    color: var(--primary);
+    font-size: 1.45rem;
+}
+
+.expert-weighing-modal-header p {
+    margin: 0;
+    color: var(--muted);
+    font-size: 0.82rem;
+}
+
+.expert-weighing-summary {
+    display: grid;
+    gap: 0.7rem;
+    margin-top: 1rem;
+}
+
+.expert-weighing-target-row {
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+    padding: 0.65rem;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: #f8fafc;
+}
+
+.expert-weighing-target-swatch {
+    width: 58px;
+    height: 48px;
+    flex-shrink: 0;
+    border: 1px solid #c9d1dc;
+    border-radius: 8px;
+}
+
+.expert-weighing-target-row strong,
+.expert-weighing-target-row span {
+    display: block;
+}
+
+.expert-weighing-target-row strong {
+    color: var(--primary);
+    font-size: 0.9rem;
+}
+
+.expert-weighing-target-row span {
+    margin-top: 0.08rem;
+    color: var(--muted);
+    font-size: 0.72rem;
+}
+
+.expert-weighing-paint-list {
+    display: grid;
+    gap: 0.45rem;
+}
+
+.expert-weighing-paint-row {
+    display: grid;
+    grid-template-columns: minmax(90px,0.8fr) minmax(110px,1fr) 90px;
+    align-items: center;
+    gap: 0.6rem;
+    min-height: 46px;
+    padding: 0.55rem 0.65rem;
+    border: 1px solid var(--border);
+    border-left-width: 6px;
+    border-radius: 9px;
+    background: #fff;
+}
+
+.expert-weighing-paint-row.red {
+    border-left-color: #b33838;
+}
+
+.expert-weighing-paint-row.yellow {
+    border-left-color: #d5a600;
+}
+
+.expert-weighing-paint-row.blue {
+    border-left-color: #275fa5;
+}
+
+.expert-weighing-paint-row strong {
+    color: var(--primary);
+    font-size: 0.82rem;
+}
+
+.expert-weighing-code {
+    color: var(--primary);
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 0.9rem;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+}
+
+.expert-weighing-weight {
+    color: var(--text);
+    font-size: 0.82rem;
+    font-weight: 700;
+    text-align: right;
+}
+
+.expert-weighing-warning {
+    margin-top: 0.8rem;
+    padding: 0.6rem 0.7rem;
+    border-radius: 8px;
+    background: #fff6de;
+    color: #755500;
+    font-size: 0.7rem;
+    line-height: 1.4;
+}
+
+.expert-weighing-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.6rem;
+    margin-top: 1rem;
+}
+
+.expert-needs-correction-btn {
+    background: #fff;
+    color: #a63d34;
+    border: 1px solid #c96e62;
+}
+
+.expert-confirm-btn {
+    background: #1f7a4d;
+}
+
+@media (max-width:700px) {
+    .submission-weighing-paint {
+        grid-template-columns: 10px minmax(0,1fr);
+    }
+
+    .submission-weighing-code-field {
+        grid-column: 2;
+        grid-template-columns: 1fr;
+    }
+
+    .submission-weighing-code-validation {
+        grid-column: 1;
+    }
+
+    .submission-weighing-confirmation {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .submission-weighing-confirmation .btn-action {
+        width: 100%;
+    }
+
+    .expert-weighing-paint-row {
+        grid-template-columns: 1fr 1fr;
+    }
+
+    .expert-weighing-weight {
+        grid-column: 2;
+        text-align: left;
+    }
+
+    .expert-weighing-actions {
+        flex-direction: column-reverse;
+    }
+
+    .expert-weighing-actions .btn-action {
+        width: 100%;
+    }
+}
