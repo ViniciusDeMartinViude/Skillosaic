@@ -849,6 +849,64 @@
                     </div>
                 </section>
 
+                <section class="submission-closing-section" aria-labelledby="submission-closing-title">
+                    <div class="submission-section-heading">
+                        <div>
+                            <span class="panel-label">Task Step 7</span>
+                            <h4 id="submission-closing-title">7 · Closing</h4>
+                            <p>Attach an image or take a photo of the final workspace condition before completing the submission.</p>
+                        </div>
+                    </div>
+
+                    <div class="submission-capture-status" id="submission-closing-status" aria-live="polite">
+                        No workspace image attached yet.
+                    </div>
+
+                    <div class="submission-closing-controls">
+                        <label class="btn-action submission-closing-upload-btn" for="submission-closing-file">
+                            Attach workspace image
+                        </label>
+                        <input
+                            id="submission-closing-file"
+                            class="submission-closing-file-input"
+                            type="file"
+                            accept="image/*"
+                        />
+                        <button class="btn-action" id="submission-closing-camera-open" type="button">
+                            Use Camera
+                        </button>
+                    </div>
+
+                    <div class="submission-closing-camera" id="submission-closing-camera" hidden>
+                        <div class="submission-closing-camera-frame">
+                            <video id="submission-closing-video" autoplay muted playsinline></video>
+                        </div>
+                        <div class="submission-closing-camera-actions">
+                            <button class="btn-action" id="submission-closing-camera-capture" type="button">
+                                Take Photo
+                            </button>
+                            <button class="btn-action submission-closing-secondary-btn" id="submission-closing-camera-stop" type="button">
+                                Stop Camera
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="submission-closing-result" id="submission-closing-result" hidden>
+                        <div class="submission-closing-preview-frame">
+                            <img id="submission-closing-preview" alt="Final workspace evidence" />
+                        </div>
+                        <div class="submission-closing-details">
+                            <span>Workspace evidence</span>
+                            <strong id="submission-closing-source">—</strong>
+                            <small id="submission-closing-time">—</small>
+                            <small id="submission-closing-dimensions">—</small>
+                            <button class="submission-closing-remove-btn" id="submission-closing-remove" type="button">
+                                Remove image
+                            </button>
+                        </div>
+                    </div>
+                </section>
+
                 <div class="submission-actions">
                     <button class="btn-action" id="submission-save-draft" type="button">Save Draft</button>
                 </div>
