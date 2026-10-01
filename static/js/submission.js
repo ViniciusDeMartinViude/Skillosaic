@@ -124,6 +124,9 @@
     let autoSaveTimer = null;
     let expertWeighingPreviousFocus = null;
     let closingCameraStream = null;
+    let expertPinHash = '';
+    let expertPinConfigLoaded = false;
+    let expertPinConfigPromise = null;
 
     const PAINT_CODE_PATTERN = /^[A-Z]\d{4}[A-Z]$/;
     const VERIFICATION_MAX_DELTA_E00 = 100;
@@ -1228,8 +1231,7 @@
     }
 
     function expertPinHashConfigured() {
-        const hash=String(window.SKILLOSAIC_EXPERT_PIN_SHA256 || '').trim().toLowerCase();
-        return /^[a-f0-9]{64}$/.test(hash);
+        return /^[a-f0-9]{64}$/.test(String(expertPinHash || '').trim().toLowerCase());
     }
 
     function normalizeExpertPin(value) {
@@ -1237,6 +1239,51 @@
             .replace(/[^A-Za-z]/g,'')
             .toUpperCase()
             .slice(0,4);
+    }
+
+    async function loadExpertPinConfig(force=false) {
+        if (!force && expertPinConfigLoaded) {
+            return expertPinHashConfigured();
+        }
+
+        if (!force && expertPinConfigPromise) {
+            return expertPinConfigPromise;
+        }
+
+        expertPinConfigPromise=(async()=>{
+            try {
+                const url=new URL('static/config/expert_pin.json',document.baseURI);
+                url.searchParams.set('v',String(Date.now()));
+
+                const response=await fetch(url.toString(),{
+                    cache:'no-store',
+                    credentials:'same-origin'
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+
+                const config=await response.json();
+                expertPinHash=String(config?.sha256 || '').trim().toLowerCase();
+                expertPinConfigLoaded=true;
+
+                if (!expertPinHashConfigured()) {
+                    throw new Error('Deployment returned an invalid Expert-code hash.');
+                }
+
+                return true;
+            } catch (error) {
+                expertPinHash='';
+                expertPinConfigLoaded=true;
+                console.error('[Skillosaic] Expert PIN config load failed:',error);
+                return false;
+            } finally {
+                expertPinConfigPromise=null;
+            }
+        })();
+
+        return expertPinConfigPromise;
     }
 
     async function sha256Hex(text) {
@@ -1265,8 +1312,10 @@
         expertWeighingConfirmBtn.disabled=!configured || !complete;
         expertWeighingPinStatusEl.classList.remove('is-success','is-error');
 
-        if (!configured) {
-            expertWeighingPinStatusEl.textContent='Expert code is not configured for this deployment.';
+        if (!expertPinConfigLoaded) {
+            expertWeighingPinStatusEl.textContent='Loading Expert-code configuration...';
+        } else if (!configured) {
+            expertWeighingPinStatusEl.textContent='Expert code configuration was not loaded from this deployment.';
             expertWeighingPinStatusEl.classList.add('is-error');
         } else if (!pin) {
             expertWeighingPinStatusEl.textContent='Enter the 4-letter Expert code.';
@@ -1277,7 +1326,7 @@
         }
     }
 
-    function openExpertWeighingModal() {
+    async function openExpertWeighingModal() {
         const testColor=currentDraft?.fields?.testColor;
         const weighing=currentDraft?.fields?.weighing;
         if (!testColor || !weighing || !allWeighingCodesValid(weighing,testColor)) return;
@@ -1286,14 +1335,19 @@
         populateExpertWeighingSummary(testColor,weighing);
 
         if (expertWeighingPinInput) expertWeighingPinInput.value='';
+        expertPinConfigLoaded=false;
+        expertPinHash='';
+
         if (expertWeighingPinStatusEl) {
-            expertWeighingPinStatusEl.textContent='Enter the 4-letter Expert code.';
+            expertWeighingPinStatusEl.textContent='Loading Expert-code configuration...';
             expertWeighingPinStatusEl.classList.remove('is-success','is-error');
         }
         if (expertWeighingConfirmBtn) expertWeighingConfirmBtn.disabled=true;
 
         expertWeighingOverlay.hidden=false;
         document.body.style.overflow='hidden';
+
+        await loadExpertPinConfig(true);
         updateExpertPinUi();
 
         if (expertWeighingPinInput) expertWeighingPinInput.focus();
@@ -1374,7 +1428,8 @@
     async function verifyExpertPinAndConfirm() {
         if (!expertWeighingPinInput || !expertWeighingPinStatusEl || !expertWeighingConfirmBtn) return;
 
-        const expectedHash=String(window.SKILLOSAIC_EXPERT_PIN_SHA256 || '').trim().toLowerCase();
+        await loadExpertPinConfig(false);
+        const expectedHash=String(expertPinHash || '').trim().toLowerCase();
         const pin=normalizeExpertPin(expertWeighingPinInput.value);
 
         expertWeighingPinInput.value=pin;
