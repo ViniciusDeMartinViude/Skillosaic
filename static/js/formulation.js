@@ -39,6 +39,8 @@
     const manualB = document.getElementById('manual-b');
     const manualButton = document.getElementById('manual-calculate');
     const manualResult = document.getElementById('manual-result');
+    const manualLabSwatch = document.getElementById('manual-lab-swatch');
+    const manualTargetLab = document.getElementById('manual-target-lab');
 
     const focusModeSelect = document.getElementById('camera-focus-mode');
     const focusInput = document.getElementById('camera-focus');
@@ -890,6 +892,48 @@
         }
     }
 
+    function labToRgbDisplay(L,a,b) {
+        const fy=(L+16)/116;
+        const fx=fy+a/500;
+        const fz=fy-b/200;
+
+        const invf=t=>{
+            const t3=t*t*t;
+            return t3>0.008856 ? t3 : (116*t-16)/903.3;
+        };
+
+        const X=0.95047*invf(fx);
+        const Y=1.00000*invf(fy);
+        const Z=1.08883*invf(fz);
+
+        let r= 3.2404542*X - 1.5371385*Y - 0.4985314*Z;
+        let g=-0.9692660*X + 1.8760108*Y + 0.0415560*Z;
+        let bl=0.0556434*X - 0.2040259*Y + 1.0572252*Z;
+
+        const gamma=v=>{
+            const encoded=v<=0.0031308 ? 12.92*v : 1.055*Math.pow(Math.max(v,0),1/2.4)-0.055;
+            return Math.round(Math.max(0,Math.min(1,encoded))*255);
+        };
+
+        return [gamma(r),gamma(g),gamma(bl)];
+    }
+
+    function updateManualLabPreview() {
+        const L=parseFloat(manualL.value);
+        const a=parseFloat(manualA.value);
+        const b=parseFloat(manualB.value);
+
+        if (![L,a,b].every(Number.isFinite) || L<0 || L>100) {
+            manualLabSwatch.style.background='linear-gradient(135deg, #eef2f6, #d8e0e8)';
+            manualTargetLab.textContent='Enter LAB values';
+            return;
+        }
+
+        const rgb=labToRgbDisplay(L,a,b);
+        manualLabSwatch.style.background=`rgb(${rgb[0]}, ${rgb[1]}, ${rgb[2]})`;
+        manualTargetLab.textContent=`L* ${L.toFixed(2)} · a* ${a.toFixed(2)} · b* ${b.toFixed(2)}`;
+    }
+
     function renderManualCalculation(grams) {
         if (!lastManualCalculation || !(grams>0)) return;
 
@@ -897,12 +941,35 @@
         const recipe=formulation.recipe;
         const amounts=recipe.map(p=>grams*p/100);
 
-        manualResult.textContent =
-            `Target LAB: L* ${L.toFixed(2)}, a* ${a.toFixed(2)}, b* ${b.toFixed(2)}\n`+
-            `Recipe: Red ${recipe[0].toFixed(2)}% · Yellow ${recipe[1].toFixed(2)}% · Blue ${recipe[2].toFixed(2)}%\n`+
-            `For ${grams.toFixed(2)} g: Red ${amounts[0].toFixed(2)} g · Yellow ${amounts[1].toFixed(2)} g · Blue ${amounts[2].toFixed(2)} g\n`+
-            `Predicted LAB: ${fmtLab(formulation.predictedLab)} · ΔE00 ${formulation.deltaE.toFixed(2)}\n`+
-            `Source: ${formulation.source}`;
+        updateManualLabPreview();
+
+        manualResult.innerHTML=`
+            <div class="manual-result-summary">
+                <div class="manual-result-target">
+                    ${Math.round(grams)} g total · Predicted ΔE00 ${formulation.deltaE.toFixed(2)}
+                </div>
+                <div class="manual-result-recipe">
+                    <div>
+                        <span>Red</span>
+                        <strong>${recipe[0].toFixed(1)}%</strong>
+                        <b>${amounts[0].toFixed(2)} g</b>
+                    </div>
+                    <div>
+                        <span>Yellow</span>
+                        <strong>${recipe[1].toFixed(1)}%</strong>
+                        <b>${amounts[1].toFixed(2)} g</b>
+                    </div>
+                    <div>
+                        <span>Blue</span>
+                        <strong>${recipe[2].toFixed(1)}%</strong>
+                        <b>${amounts[2].toFixed(2)} g</b>
+                    </div>
+                </div>
+                <div class="manual-result-meta">
+                    <strong>Predicted LAB:</strong> ${fmtLab(formulation.predictedLab)}<br>
+                    <strong>Source:</strong> ${formulation.source}
+                </div>
+            </div>`;
     }
 
     function updateAmountsFromTotalPaint() {
@@ -1044,6 +1111,10 @@
         img.src=url;
     });
 
+    [manualL,manualA,manualB].forEach(input=>{
+        input.addEventListener('input',updateManualLabPreview);
+    });
+
     manualButton.addEventListener('click',()=>{
         const L=parseFloat(manualL.value), a=parseFloat(manualA.value), b=parseFloat(manualB.value);
         const grams=parseFloat(totalGramsInput.value);
@@ -1053,6 +1124,7 @@
 
         const formulation=findPaintMix([L,a,b]);
         lastManualCalculation={L,a,b,formulation};
+        updateManualLabPreview();
         renderManualCalculation(grams);
     });
 
@@ -1079,6 +1151,7 @@
 
     clearNativeCameraControls();
     refreshCameraDevices();
+    updateManualLabPreview();
 
     window.addEventListener('beforeunload',()=>{
         if (cameraStream) cameraStream.getTracks().forEach(t=>t.stop());
