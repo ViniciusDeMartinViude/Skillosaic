@@ -2425,6 +2425,10 @@ footer {
 /* Floating submission launcher + localStorage form shell                      */
 /* -------------------------------------------------------------------------- */
 
+.submission-fab[hidden] {
+    display: none !important;
+}
+
 .submission-fab {
     position: fixed;
     right: 22px;
