@@ -515,6 +515,8 @@
             const confirmation = weighing.confirmation || {};
             w.subsection('Expert confirmation');
             w.line('Status', confirmation.status);
+            w.line('Verification method', confirmation.verificationMethod || '-');
+            w.line('Expert code format', confirmation.codeFormat || '-');
             w.line('Requested at', formatDate(confirmation.requestedAt));
             w.line('Confirmed at', formatDate(confirmation.confirmedAt));
             w.line('Returned for correction at', formatDate(confirmation.rejectedAt));

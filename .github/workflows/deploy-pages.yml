@@ -1,0 +1,70 @@
+name: Deploy Skillosaic to GitHub Pages
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Configure GitHub Pages
+        uses: actions/configure-pages@v5
+
+      - name: Build static deployment artifact
+        env:
+          EXPERT_CONFIRMATION_PIN: ${{ secrets.EXPERT_CONFIRMATION_PIN }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if [[ -z "${EXPERT_CONFIRMATION_PIN:-}" ]]; then
+            echo "::error::Repository secret EXPERT_CONFIRMATION_PIN is not configured."
+            exit 1
+          fi
+
+          EXPERT_PIN_NORMALIZED="$(printf '%s' "$EXPERT_CONFIRMATION_PIN" | tr '[:lower:]' '[:upper:]')"
+
+          if [[ ! "$EXPERT_PIN_NORMALIZED" =~ ^[A-Z]{4}$ ]]; then
+            echo "::error::EXPERT_CONFIRMATION_PIN must contain exactly 4 letters."
+            exit 1
+          fi
+
+          EXPERT_PIN_HASH="$(printf '%s' "$EXPERT_PIN_NORMALIZED" | sha256sum | awk '{print $1}')"
+
+          rm -rf _site
+          mkdir -p _site
+          rsync -a             --exclude '.git'             --exclude '.github'             --exclude '_site'             ./ _site/
+
+          cat > _site/static/js/expert_pin_config.js <<EOF
+          // Generated during GitHub Pages deployment. Do not edit in the deployed artifact.
+          window.SKILLOSAIC_EXPERT_PIN_SHA256 = '$EXPERT_PIN_HASH';
+          window.SKILLOSAIC_EXPERT_PIN_FORMAT = '4-letters';
+          EOF
+
+      - name: Upload GitHub Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

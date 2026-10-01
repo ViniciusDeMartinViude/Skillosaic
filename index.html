@@ -523,12 +523,12 @@
 
                         <label class="submission-field">
                             <span class="submission-question-line"><b>Q3</b><strong>ATS school</strong></span>
-                            <select id="submission-ats-school">
-                                <option value="">Select school</option>
-                                <option value="ATS Baniyas">ATS Baniyas</option>
-                                <option value="ATS Abu Dhabi">ATS Abu Dhabi</option>
-                                <option value="Other">Other</option>
-                            </select>
+                            <input
+                                id="submission-ats-school"
+                                type="text"
+                                autocomplete="organization"
+                                placeholder="Enter ATS school name"
+                            />
                         </label>
 
                         <label class="submission-field">
@@ -939,14 +939,34 @@
             <div class="expert-weighing-summary" id="expert-weighing-summary"></div>
 
             <div class="expert-weighing-warning">
-                This confirmation records the Expert check in this browser. No Expert PIN or identity is required in this version.
+                The Expert must enter the 4-letter confirmation code. The code itself is never stored in the submission.
+            </div>
+
+            <div class="expert-pin-panel">
+                <label for="expert-weighing-pin">
+                    <span>Expert confirmation code</span>
+                    <input
+                        id="expert-weighing-pin"
+                        type="password"
+                        inputmode="text"
+                        autocomplete="off"
+                        autocapitalize="characters"
+                        spellcheck="false"
+                        maxlength="4"
+                        pattern="[A-Za-z]{4}"
+                        placeholder="ABCD"
+                    />
+                </label>
+                <div class="expert-pin-status" id="expert-weighing-pin-status" aria-live="polite">
+                    Enter the 4-letter Expert code.
+                </div>
             </div>
 
             <div class="expert-weighing-actions">
                 <button class="btn-action expert-needs-correction-btn" id="expert-weighing-reject" type="button">
                     Needs Correction
                 </button>
-                <button class="btn-action expert-confirm-btn" id="expert-weighing-confirm" type="button">
+                <button class="btn-action expert-confirm-btn" id="expert-weighing-confirm" type="button" disabled>
                     Expert Confirm
                 </button>
             </div>
@@ -1009,6 +1029,7 @@
     <script src="static/js/jspdf.umd.min.js"></script>
     <script src="static/js/main.js"></script>
     <script src="static/js/formulation.js"></script>
+    <script src="static/js/expert_pin_config.js"></script>
     <script src="static/js/submission.js"></script>
     <script src="static/js/submission_pdf.js"></script>
 </body>
