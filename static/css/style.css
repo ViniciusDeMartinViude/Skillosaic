@@ -2394,3 +2394,28 @@ footer {
         grid-template-columns: 1fr;
     }
 }
+
+
+/* -------------------------------------------------------------------------- */
+/* K-Means image ↔ formulation card cross-highlighting                         */
+/* -------------------------------------------------------------------------- */
+
+#paint-result-canvas {
+    cursor: crosshair;
+}
+
+.paint-color-card.cluster-hover-active {
+    transform: translateY(-2px) scale(1.01);
+    border-color: var(--accent3);
+    box-shadow:
+        0 0 0 2px rgba(0, 132, 173, 0.22),
+        0 10px 24px rgba(0, 55, 100, 0.16);
+}
+
+.paint-color-card.cluster-hover-active .paint-color-strip {
+    box-shadow: inset 0 0 0 2px rgba(255,255,255,0.5);
+}
+
+.paint-color-card.cluster-hover-active .paint-color-card-body {
+    background: #f7fbfe;
+}
