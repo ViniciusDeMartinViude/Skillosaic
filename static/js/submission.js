@@ -16,10 +16,21 @@
     const saveStateEl = document.getElementById('submission-save-state');
     const saveDraftBtn = document.getElementById('submission-save-draft');
 
+    const stationNumberInput = document.getElementById('submission-station-number');
+    const fullNameInput = document.getElementById('submission-full-name');
+    const atsSchoolInput = document.getElementById('submission-ats-school');
+    const dateInput = document.getElementById('submission-date');
+    const registrationImageInput = document.getElementById('submission-registration-image');
+    const ppeYesBtn = document.getElementById('submission-ppe-yes');
+    const ppeNoBtn = document.getElementById('submission-ppe-no');
+
     if (!fab || !overlay || !modal) return;
 
     let currentDraft = null;
     let previousFocus = null;
+    let ppeConfirmation = '';
+    let isPopulatingIdentification = false;
+    let autoSaveTimer = null;
 
     function nowIso() {
         return new Date().toISOString();
@@ -60,7 +71,16 @@
             token,
             createdAt: timestamp,
             updatedAt: timestamp,
-            fields: {}
+            fields: {
+                identification: {
+                    stationNumber: '',
+                    fullName: '',
+                    atsSchool: '',
+                    date: '',
+                    registrationOrImageName: '',
+                    ppeConfirmation: ''
+                }
+            }
         };
     }
 
@@ -108,10 +128,86 @@
         return saved;
     }
 
+    function setPpeSelection(value) {
+        ppeConfirmation = value === 'yes' || value === 'no' ? value : '';
+
+        [
+            [ppeYesBtn, 'yes'],
+            [ppeNoBtn, 'no']
+        ].forEach(([button, buttonValue]) => {
+            if (!button) return;
+            const selected = ppeConfirmation === buttonValue;
+            button.classList.toggle('is-selected', selected);
+            button.setAttribute('aria-pressed', selected ? 'true' : 'false');
+        });
+    }
+
+    function getIdentificationFromForm() {
+        return {
+            stationNumber: stationNumberInput ? stationNumberInput.value : '',
+            fullName: fullNameInput ? fullNameInput.value.trim() : '',
+            atsSchool: atsSchoolInput ? atsSchoolInput.value : '',
+            date: dateInput ? dateInput.value : '',
+            registrationOrImageName: registrationImageInput ? registrationImageInput.value.trim() : '',
+            ppeConfirmation
+        };
+    }
+
+    function populateIdentificationForm(identification = {}) {
+        isPopulatingIdentification = true;
+
+        if (stationNumberInput) stationNumberInput.value = identification.stationNumber || '';
+        if (fullNameInput) fullNameInput.value = identification.fullName || '';
+        if (atsSchoolInput) atsSchoolInput.value = identification.atsSchool || '';
+        if (dateInput) dateInput.value = identification.date || '';
+        if (registrationImageInput) {
+            registrationImageInput.value = identification.registrationOrImageName || '';
+        }
+        setPpeSelection(identification.ppeConfirmation || '');
+
+        isPopulatingIdentification = false;
+    }
+
+    function syncIdentificationToDraft() {
+        if (!currentDraft) return;
+
+        currentDraft.fields = currentDraft.fields && typeof currentDraft.fields === 'object'
+            ? currentDraft.fields
+            : {};
+
+        currentDraft.fields.identification = getIdentificationFromForm();
+    }
+
+    function markDraftChanged() {
+        if (!currentDraft || isPopulatingIdentification) return;
+
+        saveStateEl.textContent = 'Saving…';
+        saveStateEl.classList.remove('is-saved', 'is-error');
+
+        clearTimeout(autoSaveTimer);
+        autoSaveTimer = setTimeout(() => {
+            syncIdentificationToDraft();
+            saveCurrentDraft();
+        }, 250);
+    }
+
+    function saveIdentificationNow() {
+        if (!currentDraft) return false;
+        clearTimeout(autoSaveTimer);
+        autoSaveTimer = null;
+        syncIdentificationToDraft();
+        return saveCurrentDraft();
+    }
+
     function renderDraft(draft, created) {
         currentDraft = draft;
         currentTokenEl.textContent = draft.token;
         workspace.hidden = false;
+
+        const identification = draft.fields && draft.fields.identification
+            ? draft.fields.identification
+            : {};
+        populateIdentificationForm(identification);
 
         tokenStatus.textContent = created
             ? 'New local submission draft created.'
@@ -134,6 +230,10 @@
             tokenStatus.classList.add('is-error');
             tokenInput.focus();
             return;
+        }
+
+        if (currentDraft && currentDraft.token !== token) {
+            saveIdentificationNow();
         }
 
         const { draft, created } = loadOrCreateDraft(token);
@@ -176,7 +276,7 @@
         if (overlay.hidden) return;
 
         if (currentDraft) {
-            saveCurrentDraft();
+            saveIdentificationNow();
         }
 
         overlay.hidden = true;
@@ -226,10 +326,35 @@
         }
     });
 
+    [
+        stationNumberInput,
+        fullNameInput,
+        atsSchoolInput,
+        dateInput,
+        registrationImageInput
+    ].filter(Boolean).forEach(input => {
+        input.addEventListener('input', markDraftChanged);
+        input.addEventListener('change', markDraftChanged);
+    });
+
+    if (ppeYesBtn) {
+        ppeYesBtn.addEventListener('click', () => {
+            setPpeSelection('yes');
+            markDraftChanged();
+        });
+    }
+
+    if (ppeNoBtn) {
+        ppeNoBtn.addEventListener('click', () => {
+            setPpeSelection('no');
+            markDraftChanged();
+        });
+    }
+
     saveDraftBtn.addEventListener('click', () => {
         if (!currentDraft) return;
-        saveCurrentDraft();
-        tokenStatus.textContent = 'Draft saved in this browser.';
+        saveIdentificationNow();
+        tokenStatus.textContent = 'Identification saved in this browser.';
         tokenStatus.classList.remove('is-error');
         tokenStatus.classList.add('is-success');
     });
@@ -241,7 +366,10 @@
     });
 
     window.addEventListener('beforeunload', () => {
-        if (currentDraft) saveCurrentDraft();
+        if (currentDraft) {
+            syncIdentificationToDraft();
+            saveCurrentDraft();
+        }
     });
 
     // Small public API so the form can grow without changing the storage layer.
