@@ -98,6 +98,20 @@
     const verificationDeltaEEl = document.getElementById('submission-verification-deltae');
     const verificationScoreEl = document.getElementById('submission-verification-score');
 
+    const closingStatusEl = document.getElementById('submission-closing-status');
+    const closingFileInput = document.getElementById('submission-closing-file');
+    const closingCameraOpenBtn = document.getElementById('submission-closing-camera-open');
+    const closingCameraEl = document.getElementById('submission-closing-camera');
+    const closingVideoEl = document.getElementById('submission-closing-video');
+    const closingCameraCaptureBtn = document.getElementById('submission-closing-camera-capture');
+    const closingCameraStopBtn = document.getElementById('submission-closing-camera-stop');
+    const closingResultEl = document.getElementById('submission-closing-result');
+    const closingPreviewEl = document.getElementById('submission-closing-preview');
+    const closingSourceEl = document.getElementById('submission-closing-source');
+    const closingTimeEl = document.getElementById('submission-closing-time');
+    const closingDimensionsEl = document.getElementById('submission-closing-dimensions');
+    const closingRemoveBtn = document.getElementById('submission-closing-remove');
+
     if (!fab || !overlay || !modal) return;
 
     let currentDraft = null;
@@ -106,6 +120,7 @@
     let isPopulatingIdentification = false;
     let autoSaveTimer = null;
     let expertWeighingPreviousFocus = null;
+    let closingCameraStream = null;
 
     const PAINT_CODE_PATTERN = /^[A-Z]\d{4}[A-Z]$/;
     const VERIFICATION_MAX_DELTA_E00 = 100;
@@ -167,7 +182,8 @@
                 paintFormulation: null,
                 testColor: null,
                 weighing: null,
-                verification: null
+                verification: null,
+                closing: null
             }
         };
     }
@@ -1530,6 +1546,254 @@
         renderVerification(testColor,verification);
     }
 
+    function stopClosingCamera() {
+        if (closingCameraStream) {
+            closingCameraStream.getTracks().forEach(track=>track.stop());
+            closingCameraStream=null;
+        }
+
+        if (closingVideoEl) {
+            closingVideoEl.srcObject=null;
+        }
+
+        if (closingCameraEl) {
+            closingCameraEl.hidden=true;
+        }
+
+        if (closingCameraOpenBtn) {
+            closingCameraOpenBtn.textContent='Use Camera';
+        }
+    }
+
+    function canvasToClosingEvidence(canvas,sourceType,sourceName,mimeType='image/jpeg') {
+        if (!canvas || !canvas.width || !canvas.height) return null;
+
+        const maxDimension=1024;
+        const quality=0.78;
+        const scale=Math.min(1,maxDimension/Math.max(canvas.width,canvas.height));
+        const width=Math.max(1,Math.round(canvas.width*scale));
+        const height=Math.max(1,Math.round(canvas.height*scale));
+
+        const out=document.createElement('canvas');
+        out.width=width;
+        out.height=height;
+        const ctx=out.getContext('2d');
+        ctx.drawImage(canvas,0,0,width,height);
+
+        return {
+            sourceType,
+            sourceName:sourceName || (sourceType==='camera' ? 'Camera capture' : 'Workspace image'),
+            capturedAt:nowIso(),
+            mimeType:'image/jpeg',
+            originalWidth:canvas.width,
+            originalHeight:canvas.height,
+            storedWidth:width,
+            storedHeight:height,
+            dataUrl:out.toDataURL('image/jpeg',quality)
+        };
+    }
+
+    function saveClosingEvidence(evidence) {
+        if (!currentDraft || !evidence) return false;
+
+        currentDraft.fields=currentDraft.fields && typeof currentDraft.fields==='object'
+            ? currentDraft.fields
+            : {};
+        currentDraft.fields.closing=evidence;
+
+        const saved=saveCurrentDraft();
+        renderClosing(evidence);
+
+        if (!saved && closingStatusEl) {
+            closingStatusEl.textContent=
+                'The workspace image was prepared, but the browser could not save it to local storage. Try a smaller image.';
+            closingStatusEl.classList.remove('is-success');
+            closingStatusEl.classList.add('is-error');
+        }
+
+        return saved;
+    }
+
+    function renderClosing(closing) {
+        const valid=Boolean(closing && closing.dataUrl);
+
+        if (!valid) {
+            if (closingResultEl) closingResultEl.hidden=true;
+            if (closingPreviewEl) closingPreviewEl.removeAttribute('src');
+            if (closingSourceEl) closingSourceEl.textContent='—';
+            if (closingTimeEl) closingTimeEl.textContent='—';
+            if (closingDimensionsEl) closingDimensionsEl.textContent='—';
+            if (closingStatusEl) {
+                closingStatusEl.textContent='No workspace image attached yet.';
+                closingStatusEl.classList.remove('is-success','is-error');
+            }
+            return;
+        }
+
+        if (closingResultEl) closingResultEl.hidden=false;
+        if (closingPreviewEl) closingPreviewEl.src=closing.dataUrl;
+
+        if (closingSourceEl) {
+            closingSourceEl.textContent=
+                closing.sourceType==='camera'
+                    ? 'Camera photo'
+                    : (closing.sourceName || 'Attached image');
+        }
+
+        if (closingTimeEl) {
+            const when=closing.capturedAt ? new Date(closing.capturedAt) : null;
+            closingTimeEl.textContent=
+                when && !Number.isNaN(when.getTime())
+                    ? `Captured · ${when.toLocaleString()}`
+                    : 'Workspace evidence saved';
+        }
+
+        if (closingDimensionsEl) {
+            const originalWidth=Number(closing.originalWidth || 0);
+            const originalHeight=Number(closing.originalHeight || 0);
+            closingDimensionsEl.textContent=
+                originalWidth && originalHeight
+                    ? `Original: ${originalWidth} × ${originalHeight} px`
+                    : 'Image dimensions unavailable';
+        }
+
+        if (closingStatusEl) {
+            closingStatusEl.textContent='Workspace evidence attached and saved locally.';
+            closingStatusEl.classList.remove('is-error');
+            closingStatusEl.classList.add('is-success');
+        }
+    }
+
+    function loadClosingFile(file) {
+        if (!file || !file.type || !file.type.startsWith('image/')) {
+            if (closingStatusEl) {
+                closingStatusEl.textContent='Select a valid image file.';
+                closingStatusEl.classList.remove('is-success');
+                closingStatusEl.classList.add('is-error');
+            }
+            return;
+        }
+
+        stopClosingCamera();
+
+        const objectUrl=URL.createObjectURL(file);
+        const image=new Image();
+
+        image.onload=()=>{
+            try {
+                const canvas=document.createElement('canvas');
+                canvas.width=image.naturalWidth;
+                canvas.height=image.naturalHeight;
+                canvas.getContext('2d').drawImage(image,0,0);
+
+                const evidence=canvasToClosingEvidence(
+                    canvas,
+                    'upload',
+                    file.name,
+                    file.type
+                );
+                saveClosingEvidence(evidence);
+            } finally {
+                URL.revokeObjectURL(objectUrl);
+                if (closingFileInput) closingFileInput.value='';
+            }
+        };
+
+        image.onerror=()=>{
+            URL.revokeObjectURL(objectUrl);
+            if (closingFileInput) closingFileInput.value='';
+            if (closingStatusEl) {
+                closingStatusEl.textContent='The selected image could not be opened.';
+                closingStatusEl.classList.remove('is-success');
+                closingStatusEl.classList.add('is-error');
+            }
+        };
+
+        image.src=objectUrl;
+    }
+
+    async function startClosingCamera() {
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+            if (closingStatusEl) {
+                closingStatusEl.textContent='Camera access is not available in this browser.';
+                closingStatusEl.classList.remove('is-success');
+                closingStatusEl.classList.add('is-error');
+            }
+            return;
+        }
+
+        stopClosingCamera();
+
+        try {
+            closingCameraStream=await navigator.mediaDevices.getUserMedia({
+                video:{
+                    width:{ideal:1920},
+                    height:{ideal:1080},
+                    facingMode:{ideal:'environment'}
+                },
+                audio:false
+            });
+
+            closingVideoEl.srcObject=closingCameraStream;
+            closingCameraEl.hidden=false;
+            closingCameraOpenBtn.textContent='Restart Camera';
+
+            if (closingStatusEl) {
+                closingStatusEl.textContent='Camera ready. Frame the complete workspace and take the photo.';
+                closingStatusEl.classList.remove('is-success','is-error');
+            }
+        } catch (error) {
+            stopClosingCamera();
+            if (closingStatusEl) {
+                closingStatusEl.textContent='Camera access was denied or the camera could not be opened.';
+                closingStatusEl.classList.remove('is-success');
+                closingStatusEl.classList.add('is-error');
+            }
+        }
+    }
+
+    function captureClosingCameraPhoto() {
+        if (
+            !closingCameraStream ||
+            !closingVideoEl ||
+            !closingVideoEl.videoWidth ||
+            !closingVideoEl.videoHeight
+        ) {
+            if (closingStatusEl) {
+                closingStatusEl.textContent='Wait for the camera preview before taking the photo.';
+                closingStatusEl.classList.remove('is-success');
+                closingStatusEl.classList.add('is-error');
+            }
+            return;
+        }
+
+        const canvas=document.createElement('canvas');
+        canvas.width=closingVideoEl.videoWidth;
+        canvas.height=closingVideoEl.videoHeight;
+        canvas.getContext('2d').drawImage(closingVideoEl,0,0);
+
+        const evidence=canvasToClosingEvidence(
+            canvas,
+            'camera',
+            'Workspace camera photo',
+            'image/jpeg'
+        );
+
+        saveClosingEvidence(evidence);
+        stopClosingCamera();
+    }
+
+    function removeClosingEvidence() {
+        if (!currentDraft) return;
+
+        currentDraft.fields=currentDraft.fields && typeof currentDraft.fields==='object'
+            ? currentDraft.fields
+            : {};
+        currentDraft.fields.closing=null;
+        saveCurrentDraft();
+        renderClosing(null);
+    }
+
     function renderDraft(draft, created) {
         currentDraft = draft;
         currentTokenEl.textContent = draft.token;
@@ -1564,6 +1828,11 @@
             ? draft.fields.verification
             : null;
         renderVerification(testColor,verification);
+
+        const closing = draft.fields && draft.fields.closing
+            ? draft.fields.closing
+            : null;
+        renderClosing(closing);
 
         tokenStatus.textContent = created
             ? 'New local submission draft created.'
@@ -1630,6 +1899,8 @@
 
     function closeSubmissionModal() {
         if (overlay.hidden) return;
+
+        stopClosingCamera();
 
         if (currentDraft) {
             saveIdentificationNow();
@@ -1727,6 +1998,29 @@
         verificationCalculateBtn.addEventListener('click',calculateVerification);
     }
 
+    if (closingFileInput) {
+        closingFileInput.addEventListener('change',event=>{
+            const file=event.target.files && event.target.files[0];
+            if (file) loadClosingFile(file);
+        });
+    }
+
+    if (closingCameraOpenBtn) {
+        closingCameraOpenBtn.addEventListener('click',startClosingCamera);
+    }
+
+    if (closingCameraCaptureBtn) {
+        closingCameraCaptureBtn.addEventListener('click',captureClosingCameraPhoto);
+    }
+
+    if (closingCameraStopBtn) {
+        closingCameraStopBtn.addEventListener('click',stopClosingCamera);
+    }
+
+    if (closingRemoveBtn) {
+        closingRemoveBtn.addEventListener('click',removeClosingEvidence);
+    }
+
     if (expertWeighingCloseBtn) {
         expertWeighingCloseBtn.addEventListener('click',closeExpertWeighingModal);
     }
@@ -1779,6 +2073,7 @@
     });
 
     window.addEventListener('beforeunload', () => {
+        stopClosingCamera();
         if (currentDraft) {
             syncIdentificationToDraft();
             saveCurrentDraft();
