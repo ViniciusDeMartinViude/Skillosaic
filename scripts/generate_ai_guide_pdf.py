@@ -123,7 +123,10 @@ def flow_row(items):
         if index < len(items) - 1:
             data.append(p("<b>&gt;</b>", "Smallx"))
 
-    widths = [25 * mm if i % 2 == 0 else 7 * mm for i in range(len(data))]
+    arrow_width = 4.5 * mm
+    available_width = 166 * mm
+    item_width = (available_width - arrow_width * (len(items) - 1)) / len(items)
+    widths = [item_width if i % 2 == 0 else arrow_width for i in range(len(data))]
     table = Table([data], colWidths=widths, hAlign="CENTER")
     style = [
         ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
