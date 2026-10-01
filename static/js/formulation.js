@@ -60,6 +60,8 @@
     let cameraStream = null;
     let cameraTrack = null;
     let currentSource = null;
+    let lastFormulationRows = null;
+    let lastManualCalculation = null;
 
     const RECIPES = [
         [100,0,0],[0,100,0],[0,0,100],[50,50,0],[0,50,50],[33,33,34],
@@ -727,6 +729,7 @@
             const formulation=findPaintMix(nixLab);
             return {...cluster,cameraLab,nixLab,formulation};
         });
+        lastFormulationRows=rows;
         renderFormulationCards(rows,grams);
         statusEl.textContent=`${k} colors analyzed`;
     }
@@ -741,6 +744,7 @@
             const amounts=recipe.map(p=>grams*p/100);
             const card=document.createElement('div');
             card.className='paint-color-card';
+            card.dataset.formulationIndex=String(i);
             card.innerHTML=`
                 <div class="paint-color-strip" style="background:rgb(${r},${g},${b});color:${fg}">
                     <span>Color ${i+1}</span><span>${row.coverage.toFixed(1)}%</span>
@@ -759,6 +763,47 @@
                 </div>`;
             cardsEl.appendChild(card);
         });
+    }
+
+    function updateFormulationAmounts(grams) {
+        if (!lastFormulationRows || !(grams>0)) return;
+
+        lastFormulationRows.forEach((row,i)=>{
+            const recipe=row.formulation.recipe;
+            const amounts=recipe.map(p=>grams*p/100);
+            const card=cardsEl.querySelector(`[data-formulation-index="${i}"]`);
+            const gramsEl=card ? card.querySelector('.paint-grams') : null;
+            if (gramsEl) {
+                gramsEl.textContent=
+                    `For ${grams.toFixed(2)} g: Red ${amounts[0].toFixed(2)} g · `+
+                    `Yellow ${amounts[1].toFixed(2)} g · Blue ${amounts[2].toFixed(2)} g`;
+            }
+        });
+    }
+
+    function renderManualCalculation(grams) {
+        if (!lastManualCalculation || !(grams>0)) return;
+
+        const {L,a,b,formulation}=lastManualCalculation;
+        const recipe=formulation.recipe;
+        const amounts=recipe.map(p=>grams*p/100);
+
+        manualResult.textContent =
+            `Target LAB: L* ${L.toFixed(2)}, a* ${a.toFixed(2)}, b* ${b.toFixed(2)}\n`+
+            `Recipe: Red ${recipe[0].toFixed(2)}% · Yellow ${recipe[1].toFixed(2)}% · Blue ${recipe[2].toFixed(2)}%\n`+
+            `For ${grams.toFixed(2)} g: Red ${amounts[0].toFixed(2)} g · Yellow ${amounts[1].toFixed(2)} g · Blue ${amounts[2].toFixed(2)} g\n`+
+            `Predicted LAB: ${fmtLab(formulation.predictedLab)} · ΔE00 ${formulation.deltaE.toFixed(2)}\n`+
+            `Source: ${formulation.source}`;
+    }
+
+    function updateAmountsFromTotalPaint() {
+        const grams=parseFloat(totalGramsInput.value);
+        if (!(grams>0)) {
+            statusEl.textContent='Enter a valid total paint amount';
+            return;
+        }
+        updateFormulationAmounts(grams);
+        renderManualCalculation(grams);
     }
 
     function fmtLab(lab) { return `L* ${lab[0].toFixed(2)}, a* ${lab[1].toFixed(2)}, b* ${lab[2].toFixed(2)}`; }
@@ -886,16 +931,14 @@
         if (![L,a,b].every(Number.isFinite)) { alert('Enter valid L*, a* and b* values.'); return; }
         if (!(L>=0 && L<=100)) { alert('L* should normally be between 0 and 100.'); return; }
         if (!(grams>0)) { alert('Enter a valid total paint amount in grams.'); return; }
+
         const formulation=findPaintMix([L,a,b]);
-        const recipe=formulation.recipe;
-        const amounts=recipe.map(p=>grams*p/100);
-        manualResult.textContent =
-            `Target LAB: L* ${L.toFixed(2)}, a* ${a.toFixed(2)}, b* ${b.toFixed(2)}\n`+
-            `Recipe: Red ${recipe[0].toFixed(2)}% · Yellow ${recipe[1].toFixed(2)}% · Blue ${recipe[2].toFixed(2)}%\n`+
-            `For ${grams.toFixed(2)} g: Red ${amounts[0].toFixed(2)} g · Yellow ${amounts[1].toFixed(2)} g · Blue ${amounts[2].toFixed(2)} g\n`+
-            `Predicted LAB: ${fmtLab(formulation.predictedLab)} · ΔE00 ${formulation.deltaE.toFixed(2)}\n`+
-            `Source: ${formulation.source}`;
+        lastManualCalculation={L,a,b,formulation};
+        renderManualCalculation(grams);
     });
+
+    totalGramsInput.addEventListener('input',updateAmountsFromTotalPaint);
+    totalGramsInput.addEventListener('change',updateAmountsFromTotalPaint);
 
     function resizeVisibleCanvases() {}
 
