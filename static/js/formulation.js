@@ -39,7 +39,25 @@
     const manualButton = document.getElementById('manual-calculate');
     const manualResult = document.getElementById('manual-result');
 
+    const focusModeSelect = document.getElementById('camera-focus-mode');
+    const focusInput = document.getElementById('camera-focus');
+    const focusValue = document.getElementById('camera-focus-value');
+    const exposureModeSelect = document.getElementById('camera-exposure-mode');
+    const exposureInput = document.getElementById('camera-exposure');
+    const exposureValue = document.getElementById('camera-exposure-value');
+    const exposureKind = document.getElementById('camera-exposure-kind');
+    const wbModeSelect = document.getElementById('camera-wb-mode');
+    const wbInput = document.getElementById('camera-wb');
+    const wbValue = document.getElementById('camera-wb-value');
+    const brightnessInput = document.getElementById('image-brightness');
+    const brightnessValue = document.getElementById('image-brightness-value');
+    const contrastInput = document.getElementById('image-contrast');
+    const contrastValue = document.getElementById('image-contrast-value');
+    const cameraCapabilityNote = document.getElementById('camera-capability-note');
+    const resetCameraControlsBtn = document.getElementById('camera-reset-controls');
+
     let cameraStream = null;
+    let cameraTrack = null;
     let currentSource = null;
 
     const RECIPES = [
@@ -386,12 +404,175 @@
         return {output,clusters:clusters.map((c,i)=>({...c,index:i}))};
     }
 
+    function clearNativeCameraControls(message='Start the camera to detect focus, exposure and white-balance capabilities.') {
+        [focusModeSelect, exposureModeSelect, wbModeSelect].forEach(select => {
+            select.innerHTML='<option value="">Unavailable</option>';
+            select.disabled=true;
+        });
+        [focusInput, exposureInput, wbInput].forEach(input => input.disabled=true);
+        focusValue.textContent='—';
+        exposureValue.textContent='—';
+        wbValue.textContent='—';
+        exposureKind.textContent='Exposure unavailable';
+        cameraCapabilityNote.textContent=message;
+    }
+
+    function populateModeSelect(select, modes, current) {
+        select.innerHTML='';
+        modes.forEach(mode => {
+            const option=document.createElement('option');
+            option.value=mode;
+            option.textContent=mode;
+            if (mode===current) option.selected=true;
+            select.appendChild(option);
+        });
+        select.disabled=modes.length===0;
+    }
+
+    function configureRange(input, valueEl, cap, current, formatter=v=>String(v)) {
+        if (!cap || typeof cap.min!=='number' || typeof cap.max!=='number') {
+            input.disabled=true;
+            valueEl.textContent='—';
+            return false;
+        }
+        input.min=String(cap.min);
+        input.max=String(cap.max);
+        input.step=String(cap.step || (cap.max-cap.min)/100 || 0.01);
+        const value=Number.isFinite(current) ? current : cap.min;
+        input.value=String(Math.min(cap.max,Math.max(cap.min,value)));
+        input.disabled=false;
+        valueEl.textContent=formatter(Number(input.value));
+        return true;
+    }
+
+    async function configureCameraControls() {
+        if (!cameraTrack) {
+            clearNativeCameraControls();
+            return;
+        }
+        if (typeof cameraTrack.getCapabilities!=='function') {
+            clearNativeCameraControls('This browser does not expose advanced camera capabilities.');
+            return;
+        }
+
+        let capabilities={}, settings={};
+        try {
+            capabilities=cameraTrack.getCapabilities() || {};
+            settings=cameraTrack.getSettings ? cameraTrack.getSettings() : {};
+        } catch (err) {
+            clearNativeCameraControls('Could not read advanced camera capabilities.');
+            return;
+        }
+
+        const supported=[];
+
+        if (Array.isArray(capabilities.focusMode) && capabilities.focusMode.length) {
+            populateModeSelect(focusModeSelect,capabilities.focusMode,settings.focusMode);
+            supported.push('focus mode');
+        } else {
+            focusModeSelect.innerHTML='<option value="">Unavailable</option>';
+            focusModeSelect.disabled=true;
+        }
+        if (configureRange(focusInput,focusValue,capabilities.focusDistance,settings.focusDistance,v=>v.toFixed(2))) {
+            supported.push('focus distance');
+        }
+
+        if (Array.isArray(capabilities.exposureMode) && capabilities.exposureMode.length) {
+            populateModeSelect(exposureModeSelect,capabilities.exposureMode,settings.exposureMode);
+            supported.push('exposure mode');
+        } else {
+            exposureModeSelect.innerHTML='<option value="">Unavailable</option>';
+            exposureModeSelect.disabled=true;
+        }
+
+        if (configureRange(
+            exposureInput, exposureValue,
+            capabilities.exposureCompensation, settings.exposureCompensation,
+            v=>v.toFixed(2)
+        )) {
+            exposureInput.dataset.constraint='exposureCompensation';
+            exposureKind.textContent='Exposure compensation';
+            supported.push('exposure compensation');
+        } else if (configureRange(
+            exposureInput, exposureValue,
+            capabilities.exposureTime, settings.exposureTime,
+            v=>v.toFixed(0)
+        )) {
+            exposureInput.dataset.constraint='exposureTime';
+            exposureKind.textContent='Exposure time';
+            supported.push('exposure time');
+        } else {
+            delete exposureInput.dataset.constraint;
+            exposureKind.textContent='Exposure unavailable';
+        }
+
+        if (Array.isArray(capabilities.whiteBalanceMode) && capabilities.whiteBalanceMode.length) {
+            populateModeSelect(wbModeSelect,capabilities.whiteBalanceMode,settings.whiteBalanceMode);
+            supported.push('white balance mode');
+        } else {
+            wbModeSelect.innerHTML='<option value="">Unavailable</option>';
+            wbModeSelect.disabled=true;
+        }
+        if (configureRange(wbInput,wbValue,capabilities.colorTemperature,settings.colorTemperature,v=>`${v.toFixed(0)} K`)) {
+            supported.push('color temperature');
+        }
+
+        cameraCapabilityNote.textContent = supported.length
+            ? `Native controls exposed by this camera/browser: ${supported.join(', ')}. Brightness and contrast below are always available as browser post-processing.`
+            : 'No native focus/exposure/white-balance controls were exposed. Brightness and contrast remain available as browser post-processing.';
+    }
+
+    async function applyTrackConstraint(constraint) {
+        if (!cameraTrack) return;
+        try {
+            await cameraTrack.applyConstraints({advanced:[constraint]});
+            statusEl.textContent='Camera setting applied';
+        } catch (err) {
+            statusEl.textContent='Camera setting unsupported';
+            console.warn('[Skillosaic] Camera constraint rejected:',constraint,err);
+        }
+    }
+
+    function cloneCanvas(rawCanvas) {
+        const c=document.createElement('canvas');
+        c.width=rawCanvas.width; c.height=rawCanvas.height;
+        c.getContext('2d',{willReadFrequently:true}).drawImage(rawCanvas,0,0);
+        return c;
+    }
+
+    function applyImageAdjustments(rawCanvas) {
+        const c=cloneCanvas(rawCanvas);
+        const ctx=c.getContext('2d',{willReadFrequently:true});
+        const image=ctx.getImageData(0,0,c.width,c.height);
+        const brightness=parseFloat(brightnessInput.value)||0;
+        const contrast=parseFloat(contrastInput.value)||0;
+        const offset=brightness*255/100;
+        const factor=Math.max(0,(100+contrast)/100);
+
+        for (let i=0;i<image.data.length;i+=4) {
+            for (let ch=0;ch<3;ch++) {
+                const adjusted=(image.data[i+ch]-128)*factor+128+offset;
+                image.data[i+ch]=Math.max(0,Math.min(255,Math.round(adjusted)));
+            }
+        }
+        ctx.putImageData(image,0,0);
+        return c;
+    }
+
+    function updateVideoFilter() {
+        const brightness=100+(parseFloat(brightnessInput.value)||0);
+        const contrast=100+(parseFloat(contrastInput.value)||0);
+        video.style.filter=`brightness(${Math.max(0,brightness)}%) contrast(${Math.max(0,contrast)}%)`;
+    }
+
     async function startCamera() {
         try {
             if (cameraStream) cameraStream.getTracks().forEach(t=>t.stop());
+            clearNativeCameraControls('Detecting camera capabilities…');
             cameraStream=await navigator.mediaDevices.getUserMedia({
                 video:{width:{ideal:1280},height:{ideal:720}}, audio:false
             });
+            cameraTrack=cameraStream.getVideoTracks()[0] || null;
             video.srcObject=cameraStream;
             video.hidden=false;
             sourceCanvas.hidden=true;
@@ -399,7 +580,11 @@
             captureBtn.disabled=false;
             sourceLabel.textContent='Live camera';
             statusEl.textContent='Camera ready';
+            updateVideoFilter();
+            await configureCameraControls();
         } catch (err) {
+            cameraTrack=null;
+            clearNativeCameraControls('Camera unavailable.');
             statusEl.textContent='Camera unavailable';
             alert(`Could not access the camera: ${err.message}`);
         }
@@ -424,13 +609,15 @@
         return c;
     }
 
-    function showSourceCanvas(canvas,label) {
+    function showSourceCanvas(rawCanvas,label) {
+        const canvas=applyImageAdjustments(rawCanvas);
         sourceCanvas.width=canvas.width; sourceCanvas.height=canvas.height;
         sourceCanvas.getContext('2d').drawImage(canvas,0,0);
         sourceCanvas.hidden=false; video.hidden=true; sourcePlaceholder.style.display='none';
         sourceLabel.textContent=label;
-        currentSource={canvas,kind:'image',name:label};
+        currentSource={rawCanvas,canvas,kind:'image',name:label};
         captureBtn.disabled=false;
+        return canvas;
     }
 
     async function analyzeCanvas(canvas) {
@@ -489,14 +676,89 @@
 
     function fmtLab(lab) { return `L* ${lab[0].toFixed(2)}, a* ${lab[1].toFixed(2)}, b* ${lab[2].toFixed(2)}`; }
 
+    focusModeSelect.addEventListener('change',()=> {
+        if (focusModeSelect.value) applyTrackConstraint({focusMode:focusModeSelect.value});
+    });
+    focusInput.addEventListener('change',()=> {
+        focusValue.textContent=Number(focusInput.value).toFixed(2);
+        applyTrackConstraint({focusDistance:Number(focusInput.value),focusMode:'manual'});
+    });
+
+    exposureModeSelect.addEventListener('change',()=> {
+        if (exposureModeSelect.value) applyTrackConstraint({exposureMode:exposureModeSelect.value});
+    });
+    exposureInput.addEventListener('change',()=> {
+        const key=exposureInput.dataset.constraint;
+        if (!key) return;
+        const value=Number(exposureInput.value);
+        exposureValue.textContent=key==='exposureTime' ? value.toFixed(0) : value.toFixed(2);
+        const constraint={[key]:value};
+        if (!exposureModeSelect.disabled && Array.from(exposureModeSelect.options).some(o=>o.value==='manual')) {
+            constraint.exposureMode='manual';
+        }
+        applyTrackConstraint(constraint);
+    });
+
+    wbModeSelect.addEventListener('change',()=> {
+        if (wbModeSelect.value) applyTrackConstraint({whiteBalanceMode:wbModeSelect.value});
+    });
+    wbInput.addEventListener('change',()=> {
+        const value=Number(wbInput.value);
+        wbValue.textContent=`${value.toFixed(0)} K`;
+        const constraint={colorTemperature:value};
+        if (!wbModeSelect.disabled && Array.from(wbModeSelect.options).some(o=>o.value==='manual')) {
+            constraint.whiteBalanceMode='manual';
+        }
+        applyTrackConstraint(constraint);
+    });
+
+    function refreshPostProcessing() {
+        brightnessValue.textContent=brightnessInput.value;
+        contrastValue.textContent=contrastInput.value;
+        updateVideoFilter();
+        if (currentSource && currentSource.rawCanvas) {
+            showSourceCanvas(currentSource.rawCanvas,currentSource.name);
+            statusEl.textContent='Image adjustment changed — analyze again';
+        }
+    }
+    brightnessInput.addEventListener('input',refreshPostProcessing);
+    contrastInput.addEventListener('input',refreshPostProcessing);
+
+    resetCameraControlsBtn.addEventListener('click',async()=>{
+        brightnessInput.value='0';
+        contrastInput.value='0';
+        brightnessValue.textContent='0';
+        contrastValue.textContent='0';
+        updateVideoFilter();
+
+        if (cameraTrack && typeof cameraTrack.getCapabilities==='function') {
+            const caps=cameraTrack.getCapabilities() || {};
+            const autoConstraints={};
+            const autoMode = modes => Array.isArray(modes)
+                ? (modes.includes('continuous') ? 'continuous' : modes.find(m=>m!=='manual'))
+                : null;
+            const focusAuto=autoMode(caps.focusMode);
+            const exposureAuto=autoMode(caps.exposureMode);
+            const wbAuto=autoMode(caps.whiteBalanceMode);
+            if (focusAuto) autoConstraints.focusMode=focusAuto;
+            if (exposureAuto) autoConstraints.exposureMode=exposureAuto;
+            if (wbAuto) autoConstraints.whiteBalanceMode=wbAuto;
+            if (Object.keys(autoConstraints).length) await applyTrackConstraint(autoConstraints);
+            await configureCameraControls();
+        }
+        if (currentSource && currentSource.rawCanvas) showSourceCanvas(currentSource.rawCanvas,currentSource.name);
+        statusEl.textContent='Controls reset';
+    });
+
     startCameraBtn.addEventListener('click',startCamera);
     captureBtn.addEventListener('click',async()=>{
         let canvas;
         if (!video.hidden && video.srcObject) {
-            canvas=createWorkingCanvasFromVideo();
-            showSourceCanvas(canvas,'Camera capture');
-        } else if (currentSource) canvas=currentSource.canvas;
-        else return;
+            const rawCanvas=createWorkingCanvasFromVideo();
+            canvas=showSourceCanvas(rawCanvas,'Camera capture');
+        } else if (currentSource && currentSource.rawCanvas) {
+            canvas=showSourceCanvas(currentSource.rawCanvas,currentSource.name);
+        } else return;
         await analyzeCanvas(canvas);
     });
 
@@ -506,8 +768,8 @@
         const url=URL.createObjectURL(file);
         const img=new Image();
         img.onload=()=>{
-            const canvas=createWorkingCanvasFromImage(img);
-            showSourceCanvas(canvas,file.name);
+            const rawCanvas=createWorkingCanvasFromImage(img);
+            const canvas=showSourceCanvas(rawCanvas,file.name);
             URL.revokeObjectURL(url);
             analyzeCanvas(canvas);
         };
@@ -533,6 +795,8 @@
     });
 
     function resizeVisibleCanvases() {}
+
+    clearNativeCameraControls();
 
     window.addEventListener('beforeunload',()=>{
         if (cameraStream) cameraStream.getTracks().forEach(t=>t.stop());
