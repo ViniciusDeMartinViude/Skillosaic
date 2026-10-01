@@ -24,6 +24,9 @@
         <button class="app-tab" id="tab-formulation" role="tab" aria-selected="false" aria-controls="paint-app">
             Paint Formulation
         </button>
+        <button class="app-tab" id="tab-ai" role="tab" aria-selected="false" aria-controls="ai-app">
+            How AI Works
+        </button>
     </div>
 
     <main id="mosaic-app" class="app-tab-panel active">
@@ -300,6 +303,243 @@
             </div>
             <div id="paint-palette-cards" class="paint-palette-cards">
                 <div class="paint-empty-state">No colors analyzed yet.</div>
+            </div>
+        </section>
+    </main>
+
+    <main id="ai-app" class="app-tab-panel ai-explainer-app" hidden>
+        <section class="ai-explainer-hero">
+            <div>
+                <p class="paint-kicker">AI inside Skillosaic</p>
+                <h1>From camera pixels to a physical paint recipe</h1>
+                <p>
+                    Skillosaic combines unsupervised clustering, calibrated regression models and
+                    numerical optimization. The goal is not only to identify representative colors,
+                    but to translate what the camera sees into a LAB target that can be reproduced
+                    with Red, Yellow and Blue paint.
+                </p>
+            </div>
+            <div class="ai-local-badge">
+                <strong>Runs locally</strong>
+                <span>Models and calculations execute in the browser.</span>
+            </div>
+        </section>
+
+        <section class="ai-pipeline" aria-label="Skillosaic AI pipeline">
+            <div class="ai-pipeline-step">
+                <span class="ai-step-number">1</span>
+                <strong>Camera / Image</strong>
+                <small>RGB pixels</small>
+            </div>
+            <span class="ai-pipeline-arrow" aria-hidden="true">→</span>
+            <div class="ai-pipeline-step">
+                <span class="ai-step-number">2</span>
+                <strong>K-Means</strong>
+                <small>Representative colors</small>
+            </div>
+            <span class="ai-pipeline-arrow" aria-hidden="true">→</span>
+            <div class="ai-pipeline-step">
+                <span class="ai-step-number">3</span>
+                <strong>Camera correction</strong>
+                <small>Nix-equivalent LAB</small>
+            </div>
+            <span class="ai-pipeline-arrow" aria-hidden="true">→</span>
+            <div class="ai-pipeline-step">
+                <span class="ai-step-number">4</span>
+                <strong>Paint model</strong>
+                <small>Predicted LAB</small>
+            </div>
+            <span class="ai-pipeline-arrow" aria-hidden="true">→</span>
+            <div class="ai-pipeline-step">
+                <span class="ai-step-number">5</span>
+                <strong>ΔE00 search</strong>
+                <small>R / Y / B recipe</small>
+            </div>
+        </section>
+
+        <section class="ai-explainer-grid">
+            <article class="ai-explainer-card">
+                <div class="ai-card-header">
+                    <span class="ai-card-index">01</span>
+                    <div>
+                        <span class="panel-label">Unsupervised learning</span>
+                        <h2>K-Means color clustering</h2>
+                    </div>
+                </div>
+
+                <p>
+                    K-Means reduces thousands of image pixels to a small number of representative
+                    color groups. It does not need labeled examples; it discovers groups by measuring
+                    similarity between colors.
+                </p>
+
+                <div class="ai-detail-block">
+                    <h3>Mosaic &amp; Contours tab</h3>
+                    <ul>
+                        <li>Pixels are converted from sRGB to CIELAB.</li>
+                        <li>Black and white are separated first using the L* thresholds.</li>
+                        <li>K-Means++ groups the remaining pixels using the a* and b* color channels.</li>
+                        <li>The current mosaic uses five color clusters, plus the black and white groups.</li>
+                    </ul>
+                </div>
+
+                <div class="ai-detail-block">
+                    <h3>Paint Formulation tab</h3>
+                    <ul>
+                        <li>The user can select K from 3 to 10.</li>
+                        <li>Clustering uses the full L*, a*, b* coordinates.</li>
+                        <li>The clusters are ordered by image coverage and become the representative-color cards.</li>
+                    </ul>
+                </div>
+
+                <div class="ai-equation">
+                    Pixel LAB → nearest centroid → representative color
+                </div>
+            </article>
+
+            <article class="ai-explainer-card">
+                <div class="ai-card-header">
+                    <span class="ai-card-index">02</span>
+                    <div>
+                        <span class="panel-label">Supervised calibration model</span>
+                        <h2>Camera LAB correction</h2>
+                    </div>
+                </div>
+
+                <p>
+                    A webcam is not a calibrated colorimeter. Its sensor, lighting, white balance and
+                    browser processing can shift the LAB values. Skillosaic therefore learns how the
+                    camera differs from the Nix measurements used as the physical reference.
+                </p>
+
+                <div class="ai-training-pair">
+                    <div>
+                        <span>Input</span>
+                        <strong>Camera LAB</strong>
+                    </div>
+                    <span>→</span>
+                    <div>
+                        <span>Learned target</span>
+                        <strong>ΔLAB = Nix LAB − Camera LAB</strong>
+                    </div>
+                    <span>→</span>
+                    <div>
+                        <span>Output</span>
+                        <strong>Nix-equivalent LAB</strong>
+                    </div>
+                </div>
+
+                <ul class="ai-feature-list">
+                    <li>The calibration set contains paired Camera LAB and Nix LAB measurements.</li>
+                    <li>Camera LAB is standardized before prediction.</li>
+                    <li>A cubic Radial Basis Function (RBF) regression model predicts the LAB correction.</li>
+                    <li>The current camera model uses smoothing = 5.0.</li>
+                </ul>
+
+                <div class="ai-equation">
+                    Corrected LAB = Camera LAB + RBF(Camera LAB)
+                </div>
+
+                <p class="ai-note">
+                    Manual LAB values entered from Nix or another calibrated source bypass this camera-correction step.
+                </p>
+            </article>
+
+            <article class="ai-explainer-card">
+                <div class="ai-card-header">
+                    <span class="ai-card-index">03</span>
+                    <div>
+                        <span class="panel-label">Regression + optimization</span>
+                        <h2>Paint formulation model</h2>
+                    </div>
+                </div>
+
+                <p>
+                    The paint model learns the relationship between known Red / Yellow / Blue mixtures
+                    and the LAB values physically measured with the Nix device.
+                </p>
+
+                <div class="ai-model-flow">
+                    <div>
+                        <strong>24 measured recipes</strong>
+                        <small>R% · Y% · B%</small>
+                    </div>
+                    <span>→</span>
+                    <div>
+                        <strong>Cubic RBF</strong>
+                        <small>Forward paint model</small>
+                    </div>
+                    <span>→</span>
+                    <div>
+                        <strong>Predicted LAB</strong>
+                        <small>for any candidate recipe</small>
+                    </div>
+                </div>
+
+                <ul class="ai-feature-list">
+                    <li>The forward model uses Red and Yellow as independent coordinates.</li>
+                    <li>Blue is constrained by B = 100 − R − Y, so the recipe always totals 100%.</li>
+                    <li>The current paint RBF uses smoothing = 0.001.</li>
+                    <li>CIEDE2000 (ΔE00) measures how close each predicted paint color is to the target LAB.</li>
+                </ul>
+
+                <div class="ai-detail-block">
+                    <h3>How the inverse recipe is found</h3>
+                    <p>
+                        The application does not rely on a direct inverse neural network. It uses the
+                        learned forward model and searches the valid R/Y/B mixture space for the recipe
+                        with the smallest ΔE00.
+                    </p>
+                    <ol>
+                        <li>If a measured recipe is already within ΔE00 ≤ 1.0, that physical measurement is reused.</li>
+                        <li>Otherwise the whole R/Y/B simplex is searched in 1% steps.</li>
+                        <li>The best area is refined locally in 0.25 percentage-point steps.</li>
+                        <li>The selected percentages are converted to grams using the requested total paint mass.</li>
+                    </ol>
+                </div>
+
+                <div class="ai-equation">
+                    Best recipe = arg min ΔE00(Target LAB, Predicted LAB(recipe))
+                </div>
+            </article>
+        </section>
+
+        <section class="ai-summary-section">
+            <div class="ai-summary-copy">
+                <span class="panel-label">What is AI here?</span>
+                <h2>Three different kinds of intelligence work together</h2>
+                <p>
+                    Skillosaic does not use a large neural network. It combines interpretable
+                    machine-learning methods with color science and constrained numerical search.
+                </p>
+            </div>
+
+            <div class="ai-summary-table" role="table" aria-label="AI methods used in Skillosaic">
+                <div class="ai-summary-row ai-summary-head" role="row">
+                    <span role="columnheader">Component</span>
+                    <span role="columnheader">Method</span>
+                    <span role="columnheader">Purpose</span>
+                </div>
+                <div class="ai-summary-row" role="row">
+                    <strong role="cell">Color extraction</strong>
+                    <span role="cell">K-Means++</span>
+                    <span role="cell">Find representative colors without labels.</span>
+                </div>
+                <div class="ai-summary-row" role="row">
+                    <strong role="cell">Camera calibration</strong>
+                    <span role="cell">Cubic RBF regression</span>
+                    <span role="cell">Transform webcam LAB into Nix-equivalent LAB.</span>
+                </div>
+                <div class="ai-summary-row" role="row">
+                    <strong role="cell">Paint prediction</strong>
+                    <span role="cell">Cubic RBF regression</span>
+                    <span role="cell">Predict the LAB produced by an R/Y/B recipe.</span>
+                </div>
+                <div class="ai-summary-row" role="row">
+                    <strong role="cell">Recipe selection</strong>
+                    <span role="cell">ΔE00 optimization</span>
+                    <span role="cell">Choose the predicted mixture closest to the target color.</span>
+                </div>
             </div>
         </section>
     </main>
