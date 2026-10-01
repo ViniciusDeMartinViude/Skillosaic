@@ -81,6 +81,23 @@
     const expertWeighingConfirmBtn = document.getElementById('expert-weighing-confirm');
     const expertWeighingRejectBtn = document.getElementById('expert-weighing-reject');
 
+    const verificationTargetEl = document.getElementById('submission-verification-target');
+    const verificationTargetSwatchEl = document.getElementById('submission-verification-target-swatch');
+    const verificationTargetLabelEl = document.getElementById('submission-verification-target-label');
+    const verificationTargetLabEl = document.getElementById('submission-verification-target-lab');
+    const verificationStatusEl = document.getElementById('submission-verification-status');
+    const verificationLInput = document.getElementById('submission-verification-L');
+    const verificationAInput = document.getElementById('submission-verification-a');
+    const verificationBInput = document.getElementById('submission-verification-b');
+    const verificationCalculateBtn = document.getElementById('submission-calculate-verification');
+    const verificationResultEl = document.getElementById('submission-verification-result');
+    const verificationDesiredSwatchEl = document.getElementById('submission-verification-desired-swatch');
+    const verificationMeasuredSwatchEl = document.getElementById('submission-verification-measured-swatch');
+    const verificationDesiredLabEl = document.getElementById('submission-verification-desired-lab');
+    const verificationMeasuredLabEl = document.getElementById('submission-verification-measured-lab');
+    const verificationDeltaEEl = document.getElementById('submission-verification-deltae');
+    const verificationScoreEl = document.getElementById('submission-verification-score');
+
     if (!fab || !overlay || !modal) return;
 
     let currentDraft = null;
@@ -91,6 +108,7 @@
     let expertWeighingPreviousFocus = null;
 
     const PAINT_CODE_PATTERN = /^[A-Z]\d{4}[A-Z]$/;
+    const VERIFICATION_MAX_DELTA_E00 = 100;
     const PAINT_META = {
         red: {label:'Red', cssClass:'red'},
         yellow: {label:'Yellow', cssClass:'yellow'},
@@ -148,7 +166,8 @@
                 imageKMeansPalette: null,
                 paintFormulation: null,
                 testColor: null,
-                weighing: null
+                weighing: null,
+                verification: null
             }
         };
     }
@@ -826,10 +845,12 @@
             : {};
         currentDraft.fields.testColor=snapshot;
         currentDraft.fields.weighing=null;
+        currentDraft.fields.verification=null;
 
         const saved=saveCurrentDraft();
         renderCapturedTestColor(snapshot);
         renderWeighing(snapshot,null);
+        renderVerification(snapshot,null);
 
         if (!saved) {
             testColorCaptureStatusEl.textContent=
@@ -1260,6 +1281,252 @@
         renderWeighing(testColor,weighing);
     }
 
+    function verificationLabToRgb(lab) {
+        if (!Array.isArray(lab) || lab.length < 3) return [238,242,246];
+        const [L,a,b]=lab.map(Number);
+        const fy=(L+16)/116;
+        const fx=fy+a/500;
+        const fz=fy-b/200;
+
+        const invf=t=>{
+            const t3=t*t*t;
+            return t3>0.008856 ? t3 : (116*t-16)/903.3;
+        };
+
+        const X=0.95047*invf(fx);
+        const Y=1.00000*invf(fy);
+        const Z=1.08883*invf(fz);
+
+        let r= 3.2404542*X - 1.5371385*Y - 0.4985314*Z;
+        let g=-0.9692660*X + 1.8760108*Y + 0.0415560*Z;
+        let bl=0.0556434*X - 0.2040259*Y + 1.0572252*Z;
+
+        const gamma=v=>{
+            const encoded=v<=0.0031308 ? 12.92*v : 1.055*Math.pow(Math.max(v,0),1/2.4)-0.055;
+            return Math.round(Math.max(0,Math.min(1,encoded))*255);
+        };
+
+        return [gamma(r),gamma(g),gamma(bl)];
+    }
+
+    function verificationDeltaE00(lab1,lab2) {
+        const sq=value=>value*value;
+        const [L1,a1,b1]=lab1.map(Number);
+        const [L2,a2,b2]=lab2.map(Number);
+        const C1=Math.hypot(a1,b1);
+        const C2=Math.hypot(a2,b2);
+        const Cbar=(C1+C2)/2;
+        const G=Cbar===0
+            ? 0
+            : 0.5*(1-Math.sqrt(Math.pow(Cbar,7)/(Math.pow(Cbar,7)+Math.pow(25,7))));
+        const a1p=(1+G)*a1;
+        const a2p=(1+G)*a2;
+        const C1p=Math.hypot(a1p,b1);
+        const C2p=Math.hypot(a2p,b2);
+
+        const hue=(b,a)=>{
+            if (Math.abs(a)<1e-15 && Math.abs(b)<1e-15) return 0;
+            const h=Math.atan2(b,a)*180/Math.PI;
+            return h<0 ? h+360 : h;
+        };
+
+        const h1p=hue(b1,a1p);
+        const h2p=hue(b2,a2p);
+        const dLp=L2-L1;
+        const dCp=C2p-C1p;
+        let dhp=0;
+
+        if (C1p*C2p!==0) {
+            const d=h2p-h1p;
+            dhp=Math.abs(d)<=180 ? d : (d>180 ? d-360 : d+360);
+        }
+
+        const dHp=2*Math.sqrt(C1p*C2p)*Math.sin((dhp/2)*Math.PI/180);
+        const Lbarp=(L1+L2)/2;
+        const Cbarp=(C1p+C2p)/2;
+        let hbarp;
+
+        if (C1p*C2p===0) {
+            hbarp=h1p+h2p;
+        } else {
+            const sum=h1p+h2p;
+            hbarp=Math.abs(h1p-h2p)<=180
+                ? sum/2
+                : (sum<360 ? (sum+360)/2 : (sum-360)/2);
+        }
+
+        const rad=deg=>deg*Math.PI/180;
+        const T=1
+            -0.17*Math.cos(rad(hbarp-30))
+            +0.24*Math.cos(rad(2*hbarp))
+            +0.32*Math.cos(rad(3*hbarp+6))
+            -0.20*Math.cos(rad(4*hbarp-63));
+        const dtheta=30*Math.exp(-sq((hbarp-275)/25));
+        const Rc=Cbarp===0
+            ? 0
+            : 2*Math.sqrt(Math.pow(Cbarp,7)/(Math.pow(Cbarp,7)+Math.pow(25,7)));
+        const Sl=1+(0.015*sq(Lbarp-50))/Math.sqrt(20+sq(Lbarp-50));
+        const Sc=1+0.045*Cbarp;
+        const Sh=1+0.015*Cbarp*T;
+        const Rt=-Math.sin(rad(2*dtheta))*Rc;
+        const tL=dLp/Sl;
+        const tC=dCp/Sc;
+        const tH=dHp/Sh;
+
+        return Math.sqrt(Math.max(0,tL*tL+tC*tC+tH*tH+Rt*tC*tH));
+    }
+
+    function verificationScoreFromDelta(deltaE00) {
+        const raw=100*(1-(Number(deltaE00)/VERIFICATION_MAX_DELTA_E00));
+        return Math.max(0,Math.min(100,raw));
+    }
+
+    function verificationSignature(testColor) {
+        if (!testColor) return '';
+        return JSON.stringify({
+            index:testColor.index,
+            targetLab:Array.isArray(testColor.targetLab) ? testColor.targetLab : [],
+            selectedAt:testColor.selectedAt || ''
+        });
+    }
+
+    function clearVerificationResult() {
+        if (verificationResultEl) verificationResultEl.hidden=true;
+        if (verificationDesiredSwatchEl) verificationDesiredSwatchEl.style.background='';
+        if (verificationMeasuredSwatchEl) verificationMeasuredSwatchEl.style.background='';
+        if (verificationDesiredLabEl) verificationDesiredLabEl.textContent='—';
+        if (verificationMeasuredLabEl) verificationMeasuredLabEl.textContent='—';
+        if (verificationDeltaEEl) verificationDeltaEEl.textContent='—';
+        if (verificationScoreEl) verificationScoreEl.textContent='—';
+    }
+
+    function renderVerification(testColor,verification) {
+        const hasTarget=Boolean(
+            testColor &&
+            Array.isArray(testColor.targetLab) &&
+            testColor.targetLab.length>=3
+        );
+
+        if (!hasTarget) {
+            if (verificationTargetEl) verificationTargetEl.hidden=true;
+            if (verificationCalculateBtn) verificationCalculateBtn.disabled=true;
+            if (verificationStatusEl) {
+                verificationStatusEl.textContent='Capture a test color in Step 4 before verification.';
+                verificationStatusEl.classList.remove('is-success','is-error');
+            }
+            if (verificationLInput) verificationLInput.value='';
+            if (verificationAInput) verificationAInput.value='';
+            if (verificationBInput) verificationBInput.value='';
+            clearVerificationResult();
+            return;
+        }
+
+        const targetLab=testColor.targetLab.map(Number);
+        const targetRgb=verificationLabToRgb(targetLab);
+
+        if (verificationTargetEl) verificationTargetEl.hidden=false;
+        if (verificationTargetSwatchEl) {
+            verificationTargetSwatchEl.style.background=
+                `rgb(${targetRgb[0]},${targetRgb[1]},${targetRgb[2]})`;
+        }
+        if (verificationTargetLabelEl) verificationTargetLabelEl.textContent=testColor.label || 'Test color';
+        if (verificationTargetLabEl) verificationTargetLabEl.textContent=formatLabValues(targetLab);
+        if (verificationCalculateBtn) verificationCalculateBtn.disabled=false;
+
+        const validVerification=
+            verification &&
+            verification.testColorSignature===verificationSignature(testColor) &&
+            Array.isArray(verification.measuredLab);
+
+        if (!validVerification) {
+            if (verificationStatusEl) {
+                verificationStatusEl.textContent='Enter the LAB values measured from the painted and scanned sample.';
+                verificationStatusEl.classList.remove('is-success','is-error');
+            }
+            clearVerificationResult();
+            return;
+        }
+
+        const measuredLab=verification.measuredLab.map(Number);
+        if (verificationLInput) verificationLInput.value=String(measuredLab[0]);
+        if (verificationAInput) verificationAInput.value=String(measuredLab[1]);
+        if (verificationBInput) verificationBInput.value=String(measuredLab[2]);
+
+        const measuredRgb=verificationLabToRgb(measuredLab);
+        if (verificationResultEl) verificationResultEl.hidden=false;
+
+        if (verificationDesiredSwatchEl) {
+            verificationDesiredSwatchEl.style.background=
+                `rgb(${targetRgb[0]},${targetRgb[1]},${targetRgb[2]})`;
+        }
+        if (verificationMeasuredSwatchEl) {
+            verificationMeasuredSwatchEl.style.background=
+                `rgb(${measuredRgb[0]},${measuredRgb[1]},${measuredRgb[2]})`;
+        }
+
+        if (verificationDesiredLabEl) verificationDesiredLabEl.textContent=formatLabValues(targetLab);
+        if (verificationMeasuredLabEl) verificationMeasuredLabEl.textContent=formatLabValues(measuredLab);
+        if (verificationDeltaEEl) verificationDeltaEEl.textContent=Number(verification.deltaE00).toFixed(2);
+        if (verificationScoreEl) verificationScoreEl.textContent=`${Number(verification.score).toFixed(1)} / 100`;
+
+        if (verificationStatusEl) {
+            const when=verification.verifiedAt ? new Date(verification.verifiedAt) : null;
+            verificationStatusEl.textContent=
+                when && !Number.isNaN(when.getTime())
+                    ? `Verification calculated · ${when.toLocaleString()}`
+                    : 'Verification calculated.';
+            verificationStatusEl.classList.remove('is-error');
+            verificationStatusEl.classList.add('is-success');
+        }
+    }
+
+    function calculateVerification() {
+        if (!currentDraft) return;
+
+        const testColor=currentDraft.fields?.testColor;
+        if (!testColor || !Array.isArray(testColor.targetLab)) {
+            renderVerification(null,null);
+            return;
+        }
+
+        const L=Number(verificationLInput.value);
+        const a=Number(verificationAInput.value);
+        const b=Number(verificationBInput.value);
+
+        if (![L,a,b].every(Number.isFinite)) {
+            verificationStatusEl.textContent='Enter valid measured L*, a* and b* values.';
+            verificationStatusEl.classList.remove('is-success');
+            verificationStatusEl.classList.add('is-error');
+            return;
+        }
+
+        if (L<0 || L>100) {
+            verificationStatusEl.textContent='Measured L* must be between 0 and 100.';
+            verificationStatusEl.classList.remove('is-success');
+            verificationStatusEl.classList.add('is-error');
+            return;
+        }
+
+        const targetLab=testColor.targetLab.map(Number);
+        const measuredLab=[L,a,b];
+        const deltaE00=verificationDeltaE00(targetLab,measuredLab);
+        const score=verificationScoreFromDelta(deltaE00);
+
+        const verification={
+            testColorSignature:verificationSignature(testColor),
+            targetLab,
+            measuredLab,
+            deltaE00,
+            score,
+            maxDeltaE00:VERIFICATION_MAX_DELTA_E00,
+            verifiedAt:nowIso()
+        };
+
+        currentDraft.fields.verification=verification;
+        saveCurrentDraft();
+        renderVerification(testColor,verification);
+    }
+
     function renderDraft(draft, created) {
         currentDraft = draft;
         currentTokenEl.textContent = draft.token;
@@ -1289,6 +1556,11 @@
             ? draft.fields.weighing
             : null;
         renderWeighing(testColor,weighing);
+
+        const verification = draft.fields && draft.fields.verification
+            ? draft.fields.verification
+            : null;
+        renderVerification(testColor,verification);
 
         tokenStatus.textContent = created
             ? 'New local submission draft created.'
@@ -1446,6 +1718,10 @@
 
     if (requestExpertConfirmationBtn) {
         requestExpertConfirmationBtn.addEventListener('click',requestExpertWeighingConfirmation);
+    }
+
+    if (verificationCalculateBtn) {
+        verificationCalculateBtn.addEventListener('click',calculateVerification);
     }
 
     if (expertWeighingCloseBtn) {
