@@ -24,6 +24,15 @@
     const ppeYesBtn = document.getElementById('submission-ppe-yes');
     const ppeNoBtn = document.getElementById('submission-ppe-no');
 
+    const captureMosaicBtn = document.getElementById('submission-capture-mosaic');
+    const captureStatusEl = document.getElementById('submission-capture-status');
+    const capturedAnalysisEl = document.getElementById('submission-captured-analysis');
+    const originalImageEl = document.getElementById('submission-original-image');
+    const mosaicImageEl = document.getElementById('submission-mosaic-image');
+    const analysisSettingsEl = document.getElementById('submission-analysis-settings');
+    const paletteCountEl = document.getElementById('submission-palette-count');
+    const paletteListEl = document.getElementById('submission-palette-list');
+
     if (!fab || !overlay || !modal) return;
 
     let currentDraft = null;
@@ -79,7 +88,8 @@
                     date: '',
                     registrationOrImageName: '',
                     ppeConfirmation: ''
-                }
+                },
+                imageKMeansPalette: null
             }
         };
     }
@@ -199,6 +209,155 @@
         return saveCurrentDraft();
     }
 
+    function clearCapturedAnalysisView() {
+        if (capturedAnalysisEl) capturedAnalysisEl.hidden = true;
+        if (originalImageEl) originalImageEl.removeAttribute('src');
+        if (mosaicImageEl) mosaicImageEl.removeAttribute('src');
+        if (analysisSettingsEl) analysisSettingsEl.innerHTML = '';
+        if (paletteListEl) paletteListEl.innerHTML = '';
+        if (paletteCountEl) paletteCountEl.textContent = '';
+    }
+
+    function renderCapturedAnalysis(snapshot) {
+        if (!snapshot || typeof snapshot !== 'object') {
+            clearCapturedAnalysisView();
+            if (captureStatusEl) {
+                captureStatusEl.textContent = 'No Mosaic & Contours result captured yet.';
+                captureStatusEl.classList.remove('is-success', 'is-error');
+            }
+            if (captureMosaicBtn) captureMosaicBtn.textContent = 'Capture from Mosaic & Contours';
+            return;
+        }
+
+        if (capturedAnalysisEl) capturedAnalysisEl.hidden = false;
+
+        if (originalImageEl && snapshot.originalImage && snapshot.originalImage.dataUrl) {
+            originalImageEl.src = snapshot.originalImage.dataUrl;
+        }
+        if (mosaicImageEl && snapshot.resultImage && snapshot.resultImage.dataUrl) {
+            mosaicImageEl.src = snapshot.resultImage.dataUrl;
+        }
+
+        if (analysisSettingsEl) {
+            analysisSettingsEl.innerHTML = '';
+            const settings = snapshot.settings || {};
+            const selectedClusters = Array.isArray(settings.selectedClusters)
+                ? settings.selectedClusters
+                : [];
+            const selectionLabel = selectedClusters.length
+                ? selectedClusters.map(index => `C${index + 1}`).join(', ')
+                : 'All';
+
+            const items = [
+                ['Image', snapshot.sourceFileName || `${snapshot.imageWidth || '?'} × ${snapshot.imageHeight || '?'} px`],
+                ['Black L <', settings.blackThresholdL ?? '—'],
+                ['White L >', settings.whiteThresholdL ?? '—'],
+                ['Smoothing', settings.smoothingRadius ?? '—'],
+                ['Line', settings.lineThickness ?? '—'],
+                ['View', settings.contoursEnabled ? 'Contours' : 'Mosaic'],
+                ['Selection', selectionLabel]
+            ];
+
+            items.forEach(([label, value]) => {
+                const chip = document.createElement('div');
+                chip.className = 'submission-analysis-chip';
+
+                const labelEl = document.createElement('span');
+                labelEl.textContent = label;
+
+                const valueEl = document.createElement('strong');
+                valueEl.textContent = String(value);
+
+                chip.append(labelEl, valueEl);
+                analysisSettingsEl.appendChild(chip);
+            });
+        }
+
+        const palette = Array.isArray(snapshot.palette) ? snapshot.palette : [];
+        if (paletteCountEl) paletteCountEl.textContent = `${palette.length} captured colors`;
+
+        if (paletteListEl) {
+            paletteListEl.innerHTML = '';
+
+            palette.forEach((color, orderIndex) => {
+                const row = document.createElement('div');
+                row.className = 'submission-palette-row';
+
+                const swatch = document.createElement('div');
+                swatch.className = 'submission-palette-swatch';
+                const rgb = Array.isArray(color.rgb) ? color.rgb : [0, 0, 0];
+                swatch.style.background = `rgb(${rgb[0]}, ${rgb[1]}, ${rgb[2]})`;
+
+                const name = document.createElement('div');
+                name.className = 'submission-palette-name';
+                name.textContent = color.label || `Color ${orderIndex + 1}`;
+
+                const lab = document.createElement('div');
+                lab.className = 'submission-palette-lab';
+                const values = color.lab || {};
+                lab.textContent =
+                    `L ${Number(values.L ?? 0).toFixed(2)} · ` +
+                    `a ${Number(values.a ?? 0).toFixed(2)} · ` +
+                    `b ${Number(values.b ?? 0).toFixed(2)}`;
+
+                const coverage = document.createElement('div');
+                coverage.className = 'submission-palette-coverage';
+                coverage.textContent = `${Number(color.coveragePercent ?? 0).toFixed(1)}%`;
+
+                row.append(swatch, name, lab, coverage);
+                paletteListEl.appendChild(row);
+            });
+        }
+
+        const capturedAt = snapshot.capturedAt ? new Date(snapshot.capturedAt) : null;
+        if (captureStatusEl) {
+            captureStatusEl.textContent = capturedAt && !Number.isNaN(capturedAt.getTime())
+                ? `Captured from Mosaic & Contours · ${capturedAt.toLocaleString()}`
+                : 'Captured from Mosaic & Contours.';
+            captureStatusEl.classList.remove('is-error');
+            captureStatusEl.classList.add('is-success');
+        }
+
+        if (captureMosaicBtn) captureMosaicBtn.textContent = 'Recapture from Mosaic & Contours';
+    }
+
+    function captureMosaicAnalysis() {
+        if (!currentDraft) return;
+
+        const mosaicApi = window.SkillosaicMosaic;
+        if (!mosaicApi || typeof mosaicApi.getSubmissionSnapshot !== 'function') {
+            captureStatusEl.textContent = 'Mosaic & Contours capture is not available.';
+            captureStatusEl.classList.remove('is-success');
+            captureStatusEl.classList.add('is-error');
+            return;
+        }
+
+        const snapshot = mosaicApi.getSubmissionSnapshot();
+        if (!snapshot) {
+            captureStatusEl.textContent =
+                'No completed Mosaic & Contours analysis found. Load an image and wait for K-Means to finish, then capture again.';
+            captureStatusEl.classList.remove('is-success');
+            captureStatusEl.classList.add('is-error');
+            return;
+        }
+
+        syncIdentificationToDraft();
+        currentDraft.fields = currentDraft.fields && typeof currentDraft.fields === 'object'
+            ? currentDraft.fields
+            : {};
+        currentDraft.fields.imageKMeansPalette = snapshot;
+
+        const saved = saveCurrentDraft();
+        renderCapturedAnalysis(snapshot);
+
+        if (!saved) {
+            captureStatusEl.textContent =
+                'The analysis was captured in memory, but the browser could not save it to local storage.';
+            captureStatusEl.classList.remove('is-success');
+            captureStatusEl.classList.add('is-error');
+        }
+    }
+
     function renderDraft(draft, created) {
         currentDraft = draft;
         currentTokenEl.textContent = draft.token;
@@ -208,6 +367,11 @@
             ? draft.fields.identification
             : {};
         populateIdentificationForm(identification);
+
+        const imageKMeansPalette = draft.fields && draft.fields.imageKMeansPalette
+            ? draft.fields.imageKMeansPalette
+            : null;
+        renderCapturedAnalysis(imageKMeansPalette);
 
         tokenStatus.textContent = created
             ? 'New local submission draft created.'
@@ -351,10 +515,14 @@
         });
     }
 
+    if (captureMosaicBtn) {
+        captureMosaicBtn.addEventListener('click', captureMosaicAnalysis);
+    }
+
     saveDraftBtn.addEventListener('click', () => {
         if (!currentDraft) return;
         saveIdentificationNow();
-        tokenStatus.textContent = 'Identification saved in this browser.';
+        tokenStatus.textContent = 'Submission draft saved in this browser.';
         tokenStatus.classList.remove('is-error');
         tokenStatus.classList.add('is-success');
     });
