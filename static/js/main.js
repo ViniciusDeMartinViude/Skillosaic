@@ -115,8 +115,9 @@ function saveLabToStorage(labData) {
 
 // In-memory store — primary source of truth (localStorage is best-effort only)
 let currentLabData = null;
-let lastKmeansResult = null; // { labels, centroids, avgL }
+let lastKmeansResult = null; // { labels, centroids, avgL, counts }
 let selectedClusters = new Set(); // empty = all selected
+let currentSourceFileName = '';
 
 const K = 5;            // colour clusters from K-Means
 const K_BLACK = K;      // cluster index for black pixels
@@ -507,6 +508,7 @@ function runProcessing() {
 
 function loadImage(file) {
     if (!file || !file.type.startsWith('image/')) return;
+    currentSourceFileName = file.name || '';
     const url = URL.createObjectURL(file);
     previewImg.onload = () => {
         const labData = extractLabFromImage(previewImg);
@@ -528,4 +530,88 @@ uploadArea.addEventListener('drop', (e) => {
     e.preventDefault();
     uploadArea.classList.remove('dragover');
     loadImage(e.dataTransfer.files[0]);
+});
+
+
+// ── Submission capture API ────────────────────────────────────────────────────
+
+function captureImageForSubmission(img, maxDimension = 960, quality = 0.82) {
+    if (!img || !img.src || !img.naturalWidth || !img.naturalHeight) return null;
+
+    const scale = Math.min(1, maxDimension / Math.max(img.naturalWidth, img.naturalHeight));
+    const width = Math.max(1, Math.round(img.naturalWidth * scale));
+    const height = Math.max(1, Math.round(img.naturalHeight * scale));
+
+    const canvas = document.createElement('canvas');
+    canvas.width = width;
+    canvas.height = height;
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(img, 0, 0, width, height);
+
+    return {
+        dataUrl: canvas.toDataURL('image/jpeg', quality),
+        width: img.naturalWidth,
+        height: img.naturalHeight,
+        previewWidth: width,
+        previewHeight: height
+    };
+}
+
+function getMosaicSubmissionSnapshot() {
+    if (!currentLabData || !lastKmeansResult || !previewImg.src || !resultImg.src) {
+        return null;
+    }
+
+    const { centroids, avgL, counts } = lastKmeansResult;
+    const totalPixels = currentLabData.width * currentLabData.height;
+    const specialLabels = {
+        [K_BLACK]: 'Black',
+        [K_WHITE]: 'White'
+    };
+
+    const palette = centroids.map(([a, b], index) => {
+        const count = counts[index] || 0;
+        if (!count) return null;
+
+        const L = avgL[index];
+        const rgb = labToRgb(L, a, b);
+
+        return {
+            index,
+            type: specialLabels[index] ? specialLabels[index].toLowerCase() : 'color',
+            label: specialLabels[index] || `Color ${index + 1}`,
+            lab: {
+                L: Number(L.toFixed(4)),
+                a: Number(a.toFixed(4)),
+                b: Number(b.toFixed(4))
+            },
+            rgb,
+            count,
+            coveragePercent: Number((count * 100 / totalPixels).toFixed(4))
+        };
+    }).filter(Boolean);
+
+    return {
+        capturedAt: new Date().toISOString(),
+        sourceFileName: currentSourceFileName,
+        originalImage: captureImageForSubmission(previewImg),
+        resultImage: captureImageForSubmission(resultImg),
+        imageWidth: currentLabData.width,
+        imageHeight: currentLabData.height,
+        kMeansColorClusters: K,
+        palette,
+        settings: {
+            blackThresholdL: Number(blackThreshold.value),
+            whiteThresholdL: Number(whiteThreshold.value),
+            smoothingRadius: Number(smoothRadius.value),
+            lineThickness: Number(contourThickness.value),
+            contoursEnabled: contourMode,
+            selectedClusters: Array.from(selectedClusters).sort((a, b) => a - b)
+        }
+    };
+}
+
+window.SkillosaicMosaic = Object.freeze({
+    getSubmissionSnapshot: getMosaicSubmissionSnapshot,
+    hasResult: () => Boolean(currentLabData && lastKmeansResult && previewImg.src && resultImg.src)
 });
