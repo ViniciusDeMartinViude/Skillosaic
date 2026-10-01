@@ -1436,3 +1436,88 @@ footer {
         max-width: 210px;
     }
 }
+
+
+/* -------------------------------------------------------------------------- */
+/* Readable formulation cards with local scrolling                             */
+/* -------------------------------------------------------------------------- */
+
+@media (min-width: 1400px) and (min-height: 800px) {
+    #paint-app .paint-palette-cards {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        grid-template-rows: none;
+        grid-auto-rows: minmax(132px, auto);
+        align-content: start;
+        gap: 0.5rem;
+        overflow-y: auto;
+        overflow-x: hidden;
+        padding-right: 0.35rem;
+        scrollbar-gutter: stable;
+    }
+
+    #paint-app .paint-color-card {
+        min-height: 132px;
+        overflow: visible;
+    }
+
+    #paint-app .paint-color-strip {
+        height: 31px;
+        padding: 0 0.6rem;
+        font-size: 0.82rem;
+    }
+
+    #paint-app .paint-color-card-body {
+        padding: 0.48rem 0.55rem;
+        gap: 0.25rem;
+        overflow: visible;
+    }
+
+    #paint-app .paint-color-card-body .small {
+        font-size: 0.76rem;
+        line-height: 1.28;
+        white-space: normal;
+        overflow: visible;
+        text-overflow: clip;
+    }
+
+    #paint-app .paint-recipe {
+        gap: 0.3rem;
+    }
+
+    #paint-app .paint-recipe div {
+        padding: 0.3rem 0.2rem;
+        font-size: 0.72rem;
+        line-height: 1.15;
+    }
+
+    #paint-app .paint-recipe strong {
+        font-size: 0.86rem;
+    }
+
+    #paint-app .paint-grams {
+        font-size: 0.76rem;
+        line-height: 1.25;
+        white-space: normal;
+        overflow: visible;
+        text-overflow: clip;
+    }
+
+    #paint-app .paint-palette-cards::-webkit-scrollbar {
+        width: 10px;
+    }
+
+    #paint-app .paint-palette-cards::-webkit-scrollbar-track {
+        background: #edf2f6;
+        border-radius: 8px;
+    }
+
+    #paint-app .paint-palette-cards::-webkit-scrollbar-thumb {
+        background: #a8b9c8;
+        border-radius: 8px;
+        border: 2px solid #edf2f6;
+    }
+
+    #paint-app .paint-palette-cards::-webkit-scrollbar-thumb:hover {
+        background: #7f98ad;
+    }
+}
