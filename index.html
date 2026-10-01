@@ -147,6 +147,76 @@
             <span class="paint-status" id="paint-status">Ready</span>
         </section>
 
+
+        <section class="camera-controls-card" id="camera-controls-card">
+            <div class="camera-controls-heading">
+                <div>
+                    <span class="panel-label">Camera &amp; Image Controls</span>
+                    <p>Native camera controls are enabled only when the browser and webcam expose them.</p>
+                </div>
+                <button class="btn-action camera-reset-btn" id="camera-reset-controls" type="button">Reset</button>
+            </div>
+
+            <div class="camera-controls-grid">
+                <div class="camera-control-block">
+                    <label for="camera-focus-mode">Focus mode</label>
+                    <select id="camera-focus-mode" disabled>
+                        <option value="">Unavailable</option>
+                    </select>
+                    <div class="camera-slider-row">
+                        <input id="camera-focus" type="range" min="0" max="1" step="0.01" value="0" disabled />
+                        <span id="camera-focus-value">—</span>
+                    </div>
+                </div>
+
+                <div class="camera-control-block">
+                    <label for="camera-exposure-mode">Exposure mode</label>
+                    <select id="camera-exposure-mode" disabled>
+                        <option value="">Unavailable</option>
+                    </select>
+                    <div class="camera-slider-row">
+                        <input id="camera-exposure" type="range" min="0" max="1" step="0.01" value="0" disabled />
+                        <span id="camera-exposure-value">—</span>
+                    </div>
+                    <small id="camera-exposure-kind">Exposure unavailable</small>
+                </div>
+
+                <div class="camera-control-block">
+                    <label for="camera-wb-mode">White balance</label>
+                    <select id="camera-wb-mode" disabled>
+                        <option value="">Unavailable</option>
+                    </select>
+                    <div class="camera-slider-row">
+                        <input id="camera-wb" type="range" min="2000" max="8000" step="100" value="5000" disabled />
+                        <span id="camera-wb-value">—</span>
+                    </div>
+                    <small>Color temperature (K), when supported</small>
+                </div>
+
+                <div class="camera-control-block postprocess-control">
+                    <label for="image-brightness">Brightness</label>
+                    <div class="camera-slider-row">
+                        <input id="image-brightness" type="range" min="-100" max="100" step="1" value="0" />
+                        <span id="image-brightness-value">0</span>
+                    </div>
+                    <small>Browser post-processing before K-Means</small>
+                </div>
+
+                <div class="camera-control-block postprocess-control">
+                    <label for="image-contrast">Contrast</label>
+                    <div class="camera-slider-row">
+                        <input id="image-contrast" type="range" min="-100" max="100" step="1" value="0" />
+                        <span id="image-contrast-value">0</span>
+                    </div>
+                    <small>Browser post-processing before K-Means</small>
+                </div>
+            </div>
+
+            <div class="camera-capability-note" id="camera-capability-note">
+                Start the camera to detect focus, exposure and white-balance capabilities.
+            </div>
+        </section>
+
         <section class="paint-grid">
             <article class="paint-card">
                 <div class="paint-card-header">
