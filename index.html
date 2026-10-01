@@ -302,6 +302,67 @@
         <p>&copy; 2026 Emirates Skills. All rights reserved.</p>
     </footer>
 
+    <!-- Manual LAB detail modal -->
+    <div class="modal-overlay manual-lab-modal-overlay" id="manual-lab-modal-overlay" hidden>
+        <div class="modal manual-lab-modal" role="dialog" aria-modal="true" aria-labelledby="manual-lab-modal-title">
+            <button class="modal-close" id="manual-lab-modal-close" aria-label="Close manual LAB details">&times;</button>
+
+            <div class="manual-lab-modal-header">
+                <div class="manual-lab-modal-swatch" id="manual-lab-modal-swatch"></div>
+                <div>
+                    <span class="panel-label">Manual LAB Formulation</span>
+                    <h2 id="manual-lab-modal-title">Target color</h2>
+                    <div class="manual-lab-modal-target" id="manual-lab-modal-target">—</div>
+                </div>
+            </div>
+
+            <div class="manual-lab-modal-info-grid">
+                <div class="manual-lab-modal-info-card">
+                    <span>Target LAB</span>
+                    <strong id="manual-lab-modal-target-lab">—</strong>
+                </div>
+                <div class="manual-lab-modal-info-card">
+                    <span>Predicted LAB</span>
+                    <strong id="manual-lab-modal-predicted-lab">—</strong>
+                </div>
+                <div class="manual-lab-modal-info-card">
+                    <span>Predicted ΔE00</span>
+                    <strong id="manual-lab-modal-deltae">—</strong>
+                </div>
+                <div class="manual-lab-modal-info-card">
+                    <span>Total paint</span>
+                    <strong id="manual-lab-modal-total">—</strong>
+                </div>
+            </div>
+
+            <section class="manual-lab-modal-section">
+                <div class="manual-lab-modal-section-title">Paint recipe</div>
+                <div class="manual-lab-modal-recipe-grid">
+                    <div class="formulation-modal-paint red">
+                        <span>Red</span>
+                        <strong id="manual-lab-modal-red-percent">—</strong>
+                        <b id="manual-lab-modal-red-grams">—</b>
+                    </div>
+                    <div class="formulation-modal-paint yellow">
+                        <span>Yellow</span>
+                        <strong id="manual-lab-modal-yellow-percent">—</strong>
+                        <b id="manual-lab-modal-yellow-grams">—</b>
+                    </div>
+                    <div class="formulation-modal-paint blue">
+                        <span>Blue</span>
+                        <strong id="manual-lab-modal-blue-percent">—</strong>
+                        <b id="manual-lab-modal-blue-grams">—</b>
+                    </div>
+                </div>
+            </section>
+
+            <div class="manual-lab-modal-source">
+                <span>Model source</span>
+                <strong id="manual-lab-modal-source">—</strong>
+            </div>
+        </div>
+    </div>
+
     <!-- Formulation detail modal -->
     <div class="modal-overlay formulation-modal-overlay" id="formulation-modal-overlay" hidden>
         <div class="modal formulation-modal" id="formulation-modal" role="dialog" aria-modal="true" aria-labelledby="formulation-modal-title">
