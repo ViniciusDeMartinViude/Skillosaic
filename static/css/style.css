@@ -3249,3 +3249,290 @@ footer {
         height: 64px;
     }
 }
+
+
+/* -------------------------------------------------------------------------- */
+/* Paint Formulation test-color selection + submission step 4                   */
+/* -------------------------------------------------------------------------- */
+
+.paint-section-title {
+    align-items: center;
+}
+
+.paint-test-color-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-shrink: 0;
+    min-width: 150px;
+    padding: 0.4rem 0.55rem;
+    border: 1px solid var(--border);
+    border-radius: 9px;
+    background: #f7f9fb;
+}
+
+.paint-test-color-status-swatch {
+    width: 34px;
+    height: 28px;
+    flex-shrink: 0;
+    border: 1px solid #c8d0d9;
+    border-radius: 6px;
+    background: linear-gradient(135deg, #eef2f6, #d8e0e8);
+}
+
+.paint-test-color-status small,
+.paint-test-color-status strong {
+    display: block;
+}
+
+.paint-test-color-status small {
+    color: var(--muted);
+    font-size: 0.62rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.paint-test-color-status strong {
+    margin-top: 0.05rem;
+    color: var(--primary);
+    font-size: 0.74rem;
+}
+
+.paint-test-color-status.has-selection {
+    border-color: rgba(42, 107, 168, 0.45);
+    background: #eef4fb;
+}
+
+.paint-color-card.test-color-selected {
+    border-color: #2a6ba8;
+    box-shadow:
+        0 0 0 2px rgba(42, 107, 168, 0.18),
+        0 8px 20px rgba(27, 54, 104, 0.12);
+}
+
+.paint-color-card.test-color-selected .paint-color-card-body {
+    background: #f8fbff;
+}
+
+.paint-test-color-actions {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.4rem;
+    margin-top: 0.45rem;
+}
+
+.paint-test-color-badge {
+    display: inline-flex;
+    align-items: center;
+    min-height: 24px;
+    padding: 0.2rem 0.45rem;
+    border-radius: 999px;
+    background: #1b3668;
+    color: #fff;
+    font-size: 0.62rem;
+    font-weight: 800;
+    letter-spacing: 0.06em;
+}
+
+.paint-test-color-select-btn {
+    min-height: 28px;
+    padding: 0.25rem 0.55rem;
+    border: 1px solid #2a6ba8;
+    border-radius: 7px;
+    background: #fff;
+    color: #1b3668;
+    font: inherit;
+    font-size: 0.68rem;
+    font-weight: 800;
+    cursor: pointer;
+}
+
+.paint-test-color-select-btn:hover {
+    background: #eef4fb;
+}
+
+.paint-test-color-select-btn.is-selected {
+    background: #1b3668;
+    border-color: #1b3668;
+    color: #fff;
+}
+
+.formulation-modal-actions {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 0.9rem;
+}
+
+.paint-test-color-modal-btn.is-selected {
+    background: #1b3668;
+}
+
+.submission-test-color-section {
+    margin-top: 1rem;
+    padding: 1rem;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    background: #fbfcfe;
+}
+
+.submission-test-color-result {
+    display: grid;
+    gap: 0.8rem;
+}
+
+.submission-test-color-hero {
+    display: grid;
+    grid-template-columns: 78px minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.75rem;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: #fff;
+}
+
+.submission-test-color-swatch {
+    width: 78px;
+    height: 62px;
+    border: 1px solid #c9d1dc;
+    border-radius: 9px;
+    background: #eef2f6;
+}
+
+.submission-test-color-title span,
+.submission-test-color-title strong,
+.submission-test-color-title small {
+    display: block;
+}
+
+.submission-test-color-title span {
+    color: var(--muted);
+    font-size: 0.65rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.submission-test-color-title strong {
+    margin-top: 0.08rem;
+    color: var(--primary);
+    font-size: 1rem;
+}
+
+.submission-test-color-title small {
+    margin-top: 0.12rem;
+    color: var(--muted);
+    font-size: 0.72rem;
+}
+
+.submission-test-color-delta {
+    min-width: 104px;
+    padding: 0.55rem 0.65rem;
+    border-radius: 9px;
+    background: #eef4fb;
+    text-align: center;
+}
+
+.submission-test-color-delta span,
+.submission-test-color-delta strong {
+    display: block;
+}
+
+.submission-test-color-delta span {
+    color: var(--muted);
+    font-size: 0.62rem;
+    font-weight: 700;
+    text-transform: uppercase;
+}
+
+.submission-test-color-delta strong {
+    margin-top: 0.12rem;
+    color: var(--primary);
+    font-size: 1.1rem;
+}
+
+.submission-test-color-labs {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.45rem;
+}
+
+.submission-test-color-labs > div {
+    padding: 0.55rem;
+    border: 1px solid var(--border);
+    border-radius: 9px;
+    background: #fff;
+}
+
+.submission-test-color-labs > div.target {
+    border-color: rgba(42, 107, 168, 0.42);
+    background: #f4f8fc;
+}
+
+.submission-test-color-labs span,
+.submission-test-color-labs strong {
+    display: block;
+}
+
+.submission-test-color-labs span {
+    color: var(--muted);
+    font-size: 0.62rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.submission-test-color-labs strong {
+    margin-top: 0.12rem;
+    color: var(--primary);
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 0.72rem;
+    line-height: 1.35;
+}
+
+.submission-test-color-meta {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    color: var(--muted);
+    font-size: 0.68rem;
+    line-height: 1.3;
+}
+
+@media (max-width: 700px) {
+    .paint-section-title {
+        align-items: flex-start;
+        flex-direction: column;
+        gap: 0.45rem;
+    }
+
+    .paint-test-color-status {
+        width: 100%;
+    }
+
+    .submission-test-color-hero {
+        grid-template-columns: 64px minmax(0, 1fr);
+    }
+
+    .submission-test-color-swatch {
+        width: 64px;
+        height: 56px;
+    }
+
+    .submission-test-color-delta {
+        grid-column: 2;
+        justify-self: start;
+    }
+
+    .submission-test-color-labs {
+        grid-template-columns: 1fr;
+    }
+
+    .submission-test-color-meta {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+}
