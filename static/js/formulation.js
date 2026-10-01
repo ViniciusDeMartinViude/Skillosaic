@@ -34,6 +34,9 @@
     const totalGramsInput = document.getElementById('paint-total-grams');
     const statusEl = document.getElementById('paint-status');
     const cardsEl = document.getElementById('paint-palette-cards');
+    const testColorStatusEl = document.getElementById('paint-test-color-status');
+    const testColorStatusSwatch = document.getElementById('paint-test-color-status-swatch');
+    const testColorStatusLabel = document.getElementById('paint-test-color-status-label');
     const manualL = document.getElementById('manual-L');
     const manualA = document.getElementById('manual-a');
     const manualB = document.getElementById('manual-b');
@@ -92,6 +95,7 @@
     const formulationModalYellowGrams = document.getElementById('formulation-modal-yellow-grams');
     const formulationModalBlueGrams = document.getElementById('formulation-modal-blue-grams');
     const formulationModalSource = document.getElementById('formulation-modal-source');
+    const formulationModalTestColorBtn = document.getElementById('formulation-modal-test-color-btn');
 
     let cameraStream = null;
     let cameraTrack = null;
@@ -101,6 +105,8 @@
     let lastKMeansRender = null;
     let activeKMeansClusterIndex = null;
     let selectedFormulationIndex = null;
+    let selectedTestColorIndex = null;
+    let selectedTestColorAt = null;
     let formulationModalPreviousFocus = null;
     let manualLabModalPreviousFocus = null;
 
@@ -790,8 +796,11 @@
             const formulation=findPaintMix(nixLab);
             return {...cluster,cameraLab,nixLab,formulation};
         });
+        selectedTestColorIndex=null;
+        selectedTestColorAt=null;
         lastFormulationRows=rows;
         renderFormulationCards(rows,grams);
+        renderTestColorSelectionState();
         statusEl.textContent=`${k} colors analyzed`;
     }
 
@@ -911,6 +920,107 @@
         return {x,y,index:y*resultCanvas.width+x};
     }
 
+    function renderTestColorSelectionState() {
+        const hasSelection=
+            selectedTestColorIndex !== null &&
+            lastFormulationRows &&
+            lastFormulationRows[selectedTestColorIndex];
+
+        cardsEl.querySelectorAll('.paint-color-card').forEach(card=>{
+            const index=Number(card.dataset.formulationIndex);
+            const selected=Boolean(hasSelection && index===selectedTestColorIndex);
+            card.classList.toggle('test-color-selected',selected);
+
+            const button=card.querySelector('[data-role="test-color-select"]');
+            if (button) {
+                button.classList.toggle('is-selected',selected);
+                button.setAttribute('aria-pressed',selected ? 'true' : 'false');
+                button.textContent=selected ? 'Selected as test color' : 'Set as test color';
+            }
+
+            const badge=card.querySelector('[data-role="test-color-badge"]');
+            if (badge) badge.hidden=!selected;
+        });
+
+        if (testColorStatusEl && testColorStatusSwatch && testColorStatusLabel) {
+            if (hasSelection) {
+                const row=lastFormulationRows[selectedTestColorIndex];
+                const [r,g,b]=row.rgb;
+                testColorStatusEl.classList.add('has-selection');
+                testColorStatusSwatch.style.background=`rgb(${r},${g},${b})`;
+                testColorStatusLabel.textContent=`Color ${selectedTestColorIndex+1}`;
+            } else {
+                testColorStatusEl.classList.remove('has-selection');
+                testColorStatusSwatch.style.background='';
+                testColorStatusLabel.textContent='Not selected';
+            }
+        }
+
+        if (formulationModalTestColorBtn && selectedFormulationIndex !== null) {
+            const selected=selectedFormulationIndex===selectedTestColorIndex;
+            formulationModalTestColorBtn.classList.toggle('is-selected',selected);
+            formulationModalTestColorBtn.setAttribute('aria-pressed',selected ? 'true' : 'false');
+            formulationModalTestColorBtn.textContent=selected
+                ? 'Selected as test color'
+                : 'Set as test color';
+        }
+    }
+
+    function selectTestColor(index) {
+        if (!lastFormulationRows || !lastFormulationRows[index]) return;
+
+        selectedTestColorIndex=index;
+        selectedTestColorAt=new Date().toISOString();
+        renderTestColorSelectionState();
+
+        window.dispatchEvent(new CustomEvent('skillosaic:test-color-selected',{
+            detail:{index,label:`Color ${index+1}`}
+        }));
+    }
+
+    function getSelectedTestColorSnapshot() {
+        if (
+            selectedTestColorIndex === null ||
+            !lastFormulationRows ||
+            !lastFormulationRows[selectedTestColorIndex]
+        ) return null;
+
+        const grams=parseFloat(totalGramsInput.value);
+        if (!(grams>0)) return null;
+
+        const row=lastFormulationRows[selectedTestColorIndex];
+        const recipe=row.formulation.recipe.map(Number);
+        const amounts=recipe.map(percent=>grams*percent/100);
+
+        return {
+            selectedAt:selectedTestColorAt || new Date().toISOString(),
+            index:selectedTestColorIndex,
+            label:`Color ${selectedTestColorIndex+1}`,
+            coveragePercent:Number(row.coverage.toFixed(4)),
+            pixelCount:row.count,
+            rgb:row.rgb.map(Number),
+            cameraLab:row.cameraLab.map(Number),
+            targetLab:row.nixLab.map(Number),
+            nixEquivalentLab:row.nixLab.map(Number),
+            totalPaintGrams:grams,
+            formulation:{
+                recipePercent:{
+                    red:recipe[0],
+                    yellow:recipe[1],
+                    blue:recipe[2]
+                },
+                grams:{
+                    red:Number(amounts[0].toFixed(4)),
+                    yellow:Number(amounts[1].toFixed(4)),
+                    blue:Number(amounts[2].toFixed(4))
+                },
+                predictedLab:row.formulation.predictedLab.map(Number),
+                predictedDeltaE00:Number(row.formulation.deltaE),
+                source:row.formulation.source
+            }
+        };
+    }
+
     function renderFormulationModal(index, grams) {
         if (!lastFormulationRows || !lastFormulationRows[index] || !(grams>0)) return;
 
@@ -936,6 +1046,7 @@
         formulationModalYellowGrams.textContent=`${amounts[1].toFixed(2)} g`;
         formulationModalBlueGrams.textContent=`${amounts[2].toFixed(2)} g`;
         formulationModalSource.textContent=row.formulation.source;
+        renderTestColorSelectionState();
     }
 
     function openFormulationModal(index) {
@@ -1003,7 +1114,28 @@
                     </div>
 
                     <div class="small paint-model-info">Predicted ΔE00: ${row.formulation.deltaE.toFixed(2)} · ${row.formulation.source}</div>
+
+                    <div class="paint-test-color-actions">
+                        <span class="paint-test-color-badge" data-role="test-color-badge" hidden>TEST COLOR</span>
+                        <button
+                            type="button"
+                            class="paint-test-color-select-btn"
+                            data-role="test-color-select"
+                            aria-pressed="false"
+                        >Set as test color</button>
+                    </div>
                 </div>`;
+
+            const testColorButton=card.querySelector('[data-role="test-color-select"]');
+            if (testColorButton) {
+                testColorButton.addEventListener('click',event=>{
+                    event.stopPropagation();
+                    selectTestColor(i);
+                });
+                testColorButton.addEventListener('keydown',event=>{
+                    event.stopPropagation();
+                });
+            }
 
             card.addEventListener('mouseenter',()=>highlightKMeansCluster(i));
             card.addEventListener('mouseleave',clearKMeansHighlight);
@@ -1023,6 +1155,7 @@
 
         // Re-analysis can preserve the previous scroll position in some browsers.
         // Always start the new formulation set at the first row.
+        renderTestColorSelectionState();
         cardsEl.scrollTop=0;
         requestAnimationFrame(()=>{ cardsEl.scrollTop=0; });
     }
@@ -1220,6 +1353,12 @@
     document.addEventListener('keydown',event=>{
         if (event.key==='Escape' && !manualLabModalOverlay.hidden) {
             closeManualLabModal();
+        }
+    });
+
+    formulationModalTestColorBtn.addEventListener('click',()=>{
+        if (selectedFormulationIndex !== null) {
+            selectTestColor(selectedFormulationIndex);
         }
     });
 
@@ -1547,12 +1686,15 @@
             },
             camera:currentSource.kind==='camera' ? getCameraSnapshotForSubmission() : null,
             formulations,
-            manualLab
+            manualLab,
+            selectedTestColor:getSelectedTestColorSnapshot()
         };
     }
 
     window.SkillosaicPaint=Object.freeze({
         getSubmissionSnapshot:getPaintSubmissionSnapshot,
+        getSelectedTestColor:getSelectedTestColorSnapshot,
+        hasSelectedTestColor:()=>Boolean(getSelectedTestColorSnapshot()),
         hasResult:()=>Boolean(
             currentSource &&
             lastFormulationRows &&
