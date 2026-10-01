@@ -3,22 +3,36 @@
 
     const tabMosaic = document.getElementById('tab-mosaic');
     const tabFormulation = document.getElementById('tab-formulation');
+    const tabAi = document.getElementById('tab-ai');
     const mosaicApp = document.getElementById('mosaic-app');
     const paintApp = document.getElementById('paint-app');
+    const aiApp = document.getElementById('ai-app');
 
     function setTab(name) {
-        const paint = name === 'paint';
-        mosaicApp.hidden = paint;
-        paintApp.hidden = !paint;
-        tabMosaic.classList.toggle('active', !paint);
-        tabFormulation.classList.toggle('active', paint);
-        tabMosaic.setAttribute('aria-selected', String(!paint));
-        tabFormulation.setAttribute('aria-selected', String(paint));
-        if (paint) window.setTimeout(resizeVisibleCanvases, 0);
+        const activeName = ['mosaic','paint','ai'].includes(name) ? name : 'mosaic';
+        const entries = [
+            {name:'mosaic',tab:tabMosaic,panel:mosaicApp},
+            {name:'paint',tab:tabFormulation,panel:paintApp},
+            {name:'ai',tab:tabAi,panel:aiApp}
+        ];
+
+        entries.forEach(entry => {
+            const active = entry.name === activeName;
+            if (entry.panel) entry.panel.hidden = !active;
+            if (entry.tab) {
+                entry.tab.classList.toggle('active', active);
+                entry.tab.setAttribute('aria-selected', String(active));
+            }
+        });
+
+        if (activeName === 'paint') {
+            window.setTimeout(resizeVisibleCanvases, 0);
+        }
     }
 
     tabMosaic.addEventListener('click', () => setTab('mosaic'));
     tabFormulation.addEventListener('click', () => setTab('paint'));
+    if (tabAi) tabAi.addEventListener('click', () => setTab('ai'));
 
     const video = document.getElementById('paint-video');
     const sourceCanvas = document.getElementById('paint-source-canvas');
