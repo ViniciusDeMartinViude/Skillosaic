@@ -4575,6 +4575,34 @@ footer {
     line-height: 1.55;
 }
 
+.ai-hero-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.7rem;
+    margin-top: 0.85rem;
+    flex-wrap: wrap;
+}
+
+.ai-guide-download {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    text-decoration: none;
+    background: var(--primary);
+    color: #fff;
+    box-shadow: 0 5px 14px rgba(0,55,100,0.14);
+}
+
+.ai-guide-download:hover {
+    filter: brightness(1.04);
+}
+
+.ai-hero-actions > span {
+    color: var(--muted);
+    font-size: 0.7rem;
+    line-height: 1.35;
+}
+
 .ai-local-badge {
     min-width: 180px;
     padding: 0.8rem 0.9rem;
@@ -4909,6 +4937,15 @@ footer {
         align-items: stretch;
         flex-direction: column;
         padding: 1rem;
+    }
+
+    .ai-hero-actions {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .ai-guide-download {
+        width: 100%;
     }
 
     .ai-pipeline {
