@@ -78,6 +78,8 @@
     const expertWeighingOverlay = document.getElementById('expert-weighing-modal-overlay');
     const expertWeighingCloseBtn = document.getElementById('expert-weighing-modal-close');
     const expertWeighingSummaryEl = document.getElementById('expert-weighing-summary');
+    const expertWeighingPinInput = document.getElementById('expert-weighing-pin');
+    const expertWeighingPinStatusEl = document.getElementById('expert-weighing-pin-status');
     const expertWeighingConfirmBtn = document.getElementById('expert-weighing-confirm');
     const expertWeighingRejectBtn = document.getElementById('expert-weighing-reject');
 
@@ -1225,6 +1227,56 @@
         expertWeighingSummaryEl.appendChild(list);
     }
 
+    function expertPinHashConfigured() {
+        const hash=String(window.SKILLOSAIC_EXPERT_PIN_SHA256 || '').trim().toLowerCase();
+        return /^[a-f0-9]{64}$/.test(hash);
+    }
+
+    function normalizeExpertPin(value) {
+        return String(value || '')
+            .replace(/[^A-Za-z]/g,'')
+            .toUpperCase()
+            .slice(0,4);
+    }
+
+    async function sha256Hex(text) {
+        if (!window.crypto || !window.crypto.subtle || typeof TextEncoder==='undefined') {
+            throw new Error('SHA-256 is not available in this browser.');
+        }
+
+        const bytes=new TextEncoder().encode(text);
+        const digest=await window.crypto.subtle.digest('SHA-256',bytes);
+        return Array.from(new Uint8Array(digest))
+            .map(byte=>byte.toString(16).padStart(2,'0'))
+            .join('');
+    }
+
+    function updateExpertPinUi() {
+        if (!expertWeighingPinInput || !expertWeighingConfirmBtn || !expertWeighingPinStatusEl) return;
+
+        const pin=normalizeExpertPin(expertWeighingPinInput.value);
+        if (expertWeighingPinInput.value!==pin) {
+            expertWeighingPinInput.value=pin;
+        }
+
+        const configured=expertPinHashConfigured();
+        const complete=/^[A-Z]{4}$/.test(pin);
+
+        expertWeighingConfirmBtn.disabled=!configured || !complete;
+        expertWeighingPinStatusEl.classList.remove('is-success','is-error');
+
+        if (!configured) {
+            expertWeighingPinStatusEl.textContent='Expert code is not configured for this deployment.';
+            expertWeighingPinStatusEl.classList.add('is-error');
+        } else if (!pin) {
+            expertWeighingPinStatusEl.textContent='Enter the 4-letter Expert code.';
+        } else if (!complete) {
+            expertWeighingPinStatusEl.textContent='The Expert code must contain exactly 4 letters.';
+        } else {
+            expertWeighingPinStatusEl.textContent='Ready to verify Expert code.';
+        }
+    }
+
     function openExpertWeighingModal() {
         const testColor=currentDraft?.fields?.testColor;
         const weighing=currentDraft?.fields?.weighing;
@@ -1232,14 +1284,30 @@
 
         expertWeighingPreviousFocus=document.activeElement;
         populateExpertWeighingSummary(testColor,weighing);
+
+        if (expertWeighingPinInput) expertWeighingPinInput.value='';
+        if (expertWeighingPinStatusEl) {
+            expertWeighingPinStatusEl.textContent='Enter the 4-letter Expert code.';
+            expertWeighingPinStatusEl.classList.remove('is-success','is-error');
+        }
+        if (expertWeighingConfirmBtn) expertWeighingConfirmBtn.disabled=true;
+
         expertWeighingOverlay.hidden=false;
         document.body.style.overflow='hidden';
-        expertWeighingConfirmBtn.focus();
+        updateExpertPinUi();
+
+        if (expertWeighingPinInput) expertWeighingPinInput.focus();
     }
 
     function closeExpertWeighingModal() {
         if (!expertWeighingOverlay || expertWeighingOverlay.hidden) return;
         expertWeighingOverlay.hidden=true;
+
+        if (expertWeighingPinInput) expertWeighingPinInput.value='';
+        if (expertWeighingPinStatusEl) {
+            expertWeighingPinStatusEl.textContent='Enter the 4-letter Expert code.';
+            expertWeighingPinStatusEl.classList.remove('is-success','is-error');
+        }
 
         document.body.style.overflow=overlay && !overlay.hidden ? 'hidden' : '';
 
@@ -1273,7 +1341,7 @@
         openExpertWeighingModal();
     }
 
-    function decideExpertWeighingConfirmation(decision) {
+    function decideExpertWeighingConfirmation(decision,confirmationMeta={}) {
         const testColor=currentDraft?.fields?.testColor;
         let weighing=currentDraft?.fields?.weighing;
         if (!testColor || !weighing) return;
@@ -1283,20 +1351,81 @@
                 status:'confirmed',
                 requestedAt:weighing.confirmation?.requestedAt || nowIso(),
                 confirmedAt:nowIso(),
-                rejectedAt:null
+                rejectedAt:null,
+                verificationMethod:confirmationMeta.verificationMethod || 'expert-code',
+                codeFormat:confirmationMeta.codeFormat || '4-letters'
             };
         } else {
             weighing.confirmation={
                 status:'rejected',
                 requestedAt:weighing.confirmation?.requestedAt || nowIso(),
                 confirmedAt:null,
-                rejectedAt:nowIso()
+                rejectedAt:nowIso(),
+                verificationMethod:null,
+                codeFormat:null
             };
         }
 
         saveWeighingState(weighing);
         closeExpertWeighingModal();
         renderWeighing(testColor,weighing);
+    }
+
+    async function verifyExpertPinAndConfirm() {
+        if (!expertWeighingPinInput || !expertWeighingPinStatusEl || !expertWeighingConfirmBtn) return;
+
+        const expectedHash=String(window.SKILLOSAIC_EXPERT_PIN_SHA256 || '').trim().toLowerCase();
+        const pin=normalizeExpertPin(expertWeighingPinInput.value);
+
+        expertWeighingPinInput.value=pin;
+        expertWeighingPinStatusEl.classList.remove('is-success','is-error');
+
+        if (!/^[a-f0-9]{64}$/.test(expectedHash)) {
+            expertWeighingPinStatusEl.textContent='Expert code is not configured for this deployment.';
+            expertWeighingPinStatusEl.classList.add('is-error');
+            expertWeighingConfirmBtn.disabled=true;
+            return;
+        }
+
+        if (!/^[A-Z]{4}$/.test(pin)) {
+            expertWeighingPinStatusEl.textContent='Enter exactly 4 letters.';
+            expertWeighingPinStatusEl.classList.add('is-error');
+            updateExpertPinUi();
+            return;
+        }
+
+        try {
+            expertWeighingConfirmBtn.disabled=true;
+            expertWeighingConfirmBtn.textContent='Verifying...';
+
+            const actualHash=await sha256Hex(pin);
+
+            if (actualHash!==expectedHash) {
+                expertWeighingPinStatusEl.textContent='Incorrect Expert code.';
+                expertWeighingPinStatusEl.classList.add('is-error');
+                expertWeighingPinInput.select();
+                expertWeighingPinInput.focus();
+                return;
+            }
+
+            expertWeighingPinStatusEl.textContent='Expert code verified.';
+            expertWeighingPinStatusEl.classList.add('is-success');
+
+            decideExpertWeighingConfirmation('confirmed',{
+                verificationMethod:'sha256-expert-code',
+                codeFormat:'4-letters'
+            });
+        } catch (error) {
+            expertWeighingPinStatusEl.textContent=`Expert code verification failed: ${error.message || error}`;
+            expertWeighingPinStatusEl.classList.add('is-error');
+        } finally {
+            if (expertWeighingConfirmBtn) {
+                expertWeighingConfirmBtn.textContent='Expert Confirm';
+                if (expertWeighingOverlay && !expertWeighingOverlay.hidden) {
+                    updateExpertPinUi();
+                }
+            }
+        }
     }
 
     function verificationLabToRgb(lab) {
@@ -2129,10 +2258,18 @@
         });
     }
 
-    if (expertWeighingConfirmBtn) {
-        expertWeighingConfirmBtn.addEventListener('click',()=>{
-            decideExpertWeighingConfirmation('confirmed');
+    if (expertWeighingPinInput) {
+        expertWeighingPinInput.addEventListener('input',updateExpertPinUi);
+        expertWeighingPinInput.addEventListener('keydown',event=>{
+            if (event.key==='Enter' && !expertWeighingConfirmBtn.disabled) {
+                event.preventDefault();
+                verifyExpertPinAndConfirm();
+            }
         });
+    }
+
+    if (expertWeighingConfirmBtn) {
+        expertWeighingConfirmBtn.addEventListener('click',verifyExpertPinAndConfirm);
     }
 
     if (expertWeighingRejectBtn) {
