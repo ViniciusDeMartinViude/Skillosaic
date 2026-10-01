@@ -937,8 +937,24 @@
         renderManualCalculation(grams);
     });
 
+    function normalizeTotalPaintInput() {
+        const raw=Number(totalGramsInput.value);
+        if (!Number.isFinite(raw)) return;
+
+        const normalized=Math.max(5,Math.round(raw/5)*5);
+        totalGramsInput.value=String(normalized);
+        updateAmountsFromTotalPaint();
+    }
+
+    totalGramsInput.addEventListener('keydown',event=>{
+        if (['.', ',', 'e', 'E', '+', '-'].includes(event.key)) {
+            event.preventDefault();
+        }
+    });
+
     totalGramsInput.addEventListener('input',updateAmountsFromTotalPaint);
-    totalGramsInput.addEventListener('change',updateAmountsFromTotalPaint);
+    totalGramsInput.addEventListener('change',normalizeTotalPaintInput);
+    totalGramsInput.addEventListener('blur',normalizeTotalPaintInput);
 
     function resizeVisibleCanvases() {}
 
