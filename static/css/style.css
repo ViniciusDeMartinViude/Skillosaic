@@ -1037,3 +1037,388 @@ footer {
         padding-right: 1rem;
     }
 }
+
+
+/* -------------------------------------------------------------------------- */
+/* Compact Full-HD layout for Paint Formulation                                */
+/* -------------------------------------------------------------------------- */
+
+.paint-hero-line {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1.5rem;
+}
+
+.paint-hero-summary {
+    margin: 0;
+    text-align: right;
+    white-space: nowrap;
+}
+
+.paint-main-row {
+    min-height: 0;
+}
+
+.compact-note {
+    margin: 0;
+    box-shadow: none;
+}
+
+@media (min-width: 1400px) and (min-height: 800px) {
+    #paint-app {
+        overflow: hidden;
+        min-height: 0;
+        display: grid;
+        grid-template-rows:
+            auto
+            auto
+            auto
+            minmax(0, 1fr)
+            220px;
+    }
+
+    #paint-app.paint-app {
+        padding: 0;
+    }
+
+    #paint-app .paint-hero {
+        padding: 0.38rem 2rem;
+    }
+
+    #paint-app .paint-kicker {
+        font-size: 0.66rem;
+        margin: 0 0 0.05rem;
+    }
+
+    #paint-app .paint-hero h1 {
+        font-size: 1rem;
+        line-height: 1.15;
+        margin: 0;
+    }
+
+    #paint-app .paint-hero-summary {
+        font-size: 0.74rem;
+        line-height: 1.2;
+    }
+
+    #paint-app .paint-controls {
+        padding: 0.42rem 2rem;
+        gap: 0.55rem;
+        align-items: center;
+        min-height: 0;
+    }
+
+    #paint-app .paint-control-group {
+        gap: 0.1rem;
+    }
+
+    #paint-app .paint-control-group label {
+        font-size: 0.64rem;
+    }
+
+    #paint-app .paint-control-group select,
+    #paint-app .paint-control-group input {
+        padding: 0.34rem 0.5rem;
+        height: 32px;
+    }
+
+    #paint-app .btn-action,
+    #paint-app .btn-upload {
+        padding: 0.38rem 0.8rem;
+        font-size: 0.76rem;
+    }
+
+    #paint-app .camera-controls-card {
+        padding: 0.38rem 2rem 0.42rem;
+        min-height: 0;
+    }
+
+    #paint-app .camera-controls-heading {
+        margin-bottom: 0.32rem;
+    }
+
+    #paint-app .camera-controls-heading p {
+        display: none;
+    }
+
+    #paint-app .camera-controls-grid {
+        grid-template-columns: repeat(5, minmax(0, 1fr));
+        gap: 0.45rem;
+    }
+
+    #paint-app .camera-control-block {
+        padding: 0.4rem 0.5rem;
+        border-radius: 8px;
+    }
+
+    #paint-app .camera-control-block > label {
+        font-size: 0.63rem;
+        margin-bottom: 0.18rem;
+    }
+
+    #paint-app .camera-control-block select {
+        padding: 0.23rem 0.35rem;
+        margin-bottom: 0.18rem;
+        font-size: 0.7rem;
+        height: 27px;
+    }
+
+    #paint-app .camera-slider-row {
+        gap: 0.25rem;
+    }
+
+    #paint-app .camera-slider-row span {
+        font-size: 0.66rem;
+        min-width: 40px;
+    }
+
+    #paint-app .camera-control-block small {
+        display: none;
+    }
+
+    #paint-app .camera-capability-note {
+        margin-top: 0.28rem;
+        font-size: 0.64rem;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    #paint-app .paint-main-row {
+        display: grid;
+        grid-template-columns: minmax(0, 2.25fr) minmax(300px, 0.75fr);
+        gap: 0.65rem;
+        padding: 0.55rem 2rem 0;
+        overflow: hidden;
+    }
+
+    #paint-app .paint-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 0.65rem;
+        padding: 0;
+        min-height: 0;
+        height: 100%;
+        overflow: hidden;
+    }
+
+    #paint-app .paint-card {
+        padding: 0.55rem;
+        display: flex;
+        flex-direction: column;
+        min-height: 0;
+        overflow: hidden;
+    }
+
+    #paint-app .paint-card-header {
+        margin-bottom: 0.3rem;
+        flex-shrink: 0;
+    }
+
+    #paint-app .paint-card-header .panel-label {
+        font-size: 0.63rem;
+    }
+
+    #paint-app .paint-card-header strong {
+        margin-top: 0.05rem;
+        font-size: 0.78rem;
+    }
+
+    #paint-app .paint-media-frame {
+        flex: 1;
+        height: auto;
+        min-height: 0;
+        border-radius: 8px;
+    }
+
+    #paint-app .paint-placeholder {
+        font-size: 0.74rem;
+        padding: 0.8rem;
+    }
+
+    #paint-app .manual-lab-card {
+        margin: 0;
+        padding: 0.62rem;
+        display: flex;
+        flex-direction: column;
+        gap: 0.42rem;
+        min-height: 0;
+        overflow: hidden;
+    }
+
+    #paint-app .manual-lab-copy h2 {
+        font-size: 0.9rem;
+        margin: 0.1rem 0 0.12rem;
+    }
+
+    #paint-app .manual-lab-copy p {
+        font-size: 0.69rem;
+        line-height: 1.25;
+    }
+
+    #paint-app .manual-lab-form {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 0.35rem;
+        align-items: end;
+    }
+
+    #paint-app .manual-lab-form label {
+        font-size: 0.62rem;
+    }
+
+    #paint-app .manual-lab-form input {
+        width: 100%;
+        padding: 0.32rem 0.38rem;
+        height: 30px;
+    }
+
+    #paint-app .manual-lab-form .btn-action {
+        grid-column: 1 / -1;
+        width: 100%;
+    }
+
+    #paint-app .manual-result {
+        padding: 0.45rem 0.5rem;
+        font-size: 0.68rem;
+        line-height: 1.28;
+        min-height: 56px;
+        max-height: 96px;
+        overflow: hidden;
+    }
+
+    #paint-app .compact-note {
+        padding: 0.42rem 0.48rem;
+        font-size: 0.64rem;
+        line-height: 1.25;
+        margin-top: auto;
+    }
+
+    #paint-app .paint-palette-section {
+        margin: 0.5rem 2rem 0.65rem;
+        padding: 0.5rem;
+        min-height: 0;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+    }
+
+    #paint-app .paint-section-title {
+        margin-bottom: 0.3rem;
+        flex-shrink: 0;
+    }
+
+    #paint-app .paint-section-title .panel-label {
+        font-size: 0.65rem;
+    }
+
+    #paint-app .paint-section-title p {
+        font-size: 0.66rem;
+        margin-top: 0.05rem;
+    }
+
+    #paint-app .paint-palette-cards {
+        flex: 1;
+        min-height: 0;
+        display: grid;
+        grid-template-columns: repeat(5, minmax(0, 1fr));
+        grid-template-rows: repeat(2, minmax(0, 1fr));
+        grid-auto-rows: minmax(0, 1fr);
+        gap: 0.32rem;
+        overflow: hidden;
+    }
+
+    #paint-app .paint-color-card {
+        min-height: 0;
+        border-radius: 8px;
+        overflow: hidden;
+    }
+
+    #paint-app .paint-color-strip {
+        height: 24px;
+        padding: 0 0.42rem;
+        font-size: 0.67rem;
+    }
+
+    #paint-app .paint-color-card-body {
+        padding: 0.28rem 0.35rem;
+        gap: 0.12rem;
+        overflow: hidden;
+    }
+
+    #paint-app .paint-color-card-body .small {
+        font-size: 0.6rem;
+        line-height: 1.16;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    #paint-app .paint-recipe {
+        gap: 0.2rem;
+    }
+
+    #paint-app .paint-recipe div {
+        padding: 0.18rem 0.12rem;
+        font-size: 0.59rem;
+        line-height: 1.1;
+        border-radius: 5px;
+    }
+
+    #paint-app .paint-recipe strong {
+        font-size: 0.68rem;
+    }
+
+    #paint-app .paint-grams {
+        font-size: 0.6rem;
+        line-height: 1.18;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    #paint-app .paint-empty-state {
+        grid-column: 1 / -1;
+        align-self: center;
+        padding: 0.5rem;
+        font-size: 0.75rem;
+    }
+}
+
+/* Slightly tighter variant for a common 1080p browser viewport. */
+@media (min-width: 1400px) and (min-height: 800px) and (max-height: 930px) {
+    #paint-app {
+        grid-template-rows:
+            auto
+            auto
+            auto
+            minmax(0, 1fr)
+            198px;
+    }
+
+    #paint-app .camera-controls-card {
+        padding-top: 0.3rem;
+        padding-bottom: 0.32rem;
+    }
+
+    #paint-app .paint-main-row {
+        padding-top: 0.4rem;
+    }
+
+    #paint-app .paint-palette-section {
+        margin-top: 0.38rem;
+        margin-bottom: 0.45rem;
+    }
+}
+
+/* Smaller screens retain scrolling as a safety fallback. */
+@media (max-width: 1399px), (max-height: 799px) {
+    #paint-app {
+        overflow-y: auto;
+    }
+
+    #paint-app .paint-main-row {
+        display: block;
+    }
+}
