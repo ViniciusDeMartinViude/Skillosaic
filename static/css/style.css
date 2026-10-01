@@ -1422,3 +1422,17 @@ footer {
         display: block;
     }
 }
+
+
+/* Camera selector */
+.camera-select-group select {
+    min-width: 200px;
+    max-width: 260px;
+}
+
+@media (min-width: 1400px) and (min-height: 800px) {
+    #paint-app .camera-select-group select {
+        min-width: 165px;
+        max-width: 210px;
+    }
+}
