@@ -184,7 +184,8 @@
                 testColor: null,
                 weighing: null,
                 verification: null,
-                closing: null
+                closing: null,
+                finalization: null
             }
         };
     }
@@ -1925,6 +1926,15 @@
         saveStateEl.textContent = created ? 'New draft' : 'Saved locally';
         saveStateEl.classList.remove('is-error');
         saveStateEl.classList.toggle('is-saved', !created);
+
+        window.dispatchEvent(new CustomEvent('skillosaic:submission-opened',{
+            detail:{
+                token:draft.token,
+                finalization:draft.fields && draft.fields.finalization
+                    ? draft.fields.finalization
+                    : null
+            }
+        }));
     }
 
     function openTokenDraft() {
@@ -2172,7 +2182,7 @@
     window.SkillosaicSubmission = Object.freeze({
         getCurrentDraft,
         updateFields,
-        save: saveCurrentDraft,
+        save: saveIdentificationNow,
         getCurrentToken: () => currentDraft ? currentDraft.token : null
     });
 })();
