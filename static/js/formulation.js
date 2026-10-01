@@ -57,11 +57,31 @@
     const cameraCapabilityNote = document.getElementById('camera-capability-note');
     const resetCameraControlsBtn = document.getElementById('camera-reset-controls');
 
+    const formulationModalOverlay = document.getElementById('formulation-modal-overlay');
+    const formulationModalClose = document.getElementById('formulation-modal-close');
+    const formulationModalSwatch = document.getElementById('formulation-modal-swatch');
+    const formulationModalTitle = document.getElementById('formulation-modal-title');
+    const formulationModalCoverage = document.getElementById('formulation-modal-coverage');
+    const formulationModalRgb = document.getElementById('formulation-modal-rgb');
+    const formulationModalCameraLab = document.getElementById('formulation-modal-camera-lab');
+    const formulationModalNixLab = document.getElementById('formulation-modal-nix-lab');
+    const formulationModalDeltaE = document.getElementById('formulation-modal-deltae');
+    const formulationModalTotal = document.getElementById('formulation-modal-total');
+    const formulationModalRedPercent = document.getElementById('formulation-modal-red-percent');
+    const formulationModalYellowPercent = document.getElementById('formulation-modal-yellow-percent');
+    const formulationModalBluePercent = document.getElementById('formulation-modal-blue-percent');
+    const formulationModalRedGrams = document.getElementById('formulation-modal-red-grams');
+    const formulationModalYellowGrams = document.getElementById('formulation-modal-yellow-grams');
+    const formulationModalBlueGrams = document.getElementById('formulation-modal-blue-grams');
+    const formulationModalSource = document.getElementById('formulation-modal-source');
+
     let cameraStream = null;
     let cameraTrack = null;
     let currentSource = null;
     let lastFormulationRows = null;
     let lastManualCalculation = null;
+    let selectedFormulationIndex = null;
+    let formulationModalPreviousFocus = null;
 
     const RECIPES = [
         [100,0,0],[0,100,0],[0,0,100],[50,50,0],[0,50,50],[33,33,34],
@@ -734,6 +754,58 @@
         statusEl.textContent=`${k} colors analyzed`;
     }
 
+    function renderFormulationModal(index, grams) {
+        if (!lastFormulationRows || !lastFormulationRows[index] || !(grams>0)) return;
+
+        const row=lastFormulationRows[index];
+        const [r,g,b]=row.rgb;
+        const recipe=row.formulation.recipe;
+        const amounts=recipe.map(p=>grams*p/100);
+
+        formulationModalSwatch.style.background=`rgb(${r},${g},${b})`;
+        formulationModalTitle.textContent=`Color ${index+1}`;
+        formulationModalCoverage.textContent=`${row.coverage.toFixed(1)}% of analyzed image`;
+        formulationModalRgb.textContent=`${r}, ${g}, ${b}`;
+        formulationModalCameraLab.textContent=fmtLab(row.cameraLab);
+        formulationModalNixLab.textContent=fmtLab(row.nixLab);
+        formulationModalDeltaE.textContent=row.formulation.deltaE.toFixed(2);
+        formulationModalTotal.textContent=`${Math.round(grams)} g total`;
+
+        formulationModalRedPercent.textContent=`${recipe[0].toFixed(1)}%`;
+        formulationModalYellowPercent.textContent=`${recipe[1].toFixed(1)}%`;
+        formulationModalBluePercent.textContent=`${recipe[2].toFixed(1)}%`;
+
+        formulationModalRedGrams.textContent=`${amounts[0].toFixed(2)} g`;
+        formulationModalYellowGrams.textContent=`${amounts[1].toFixed(2)} g`;
+        formulationModalBlueGrams.textContent=`${amounts[2].toFixed(2)} g`;
+        formulationModalSource.textContent=row.formulation.source;
+    }
+
+    function openFormulationModal(index) {
+        const grams=parseFloat(totalGramsInput.value);
+        if (!lastFormulationRows || !lastFormulationRows[index] || !(grams>0)) return;
+
+        selectedFormulationIndex=index;
+        formulationModalPreviousFocus=document.activeElement;
+        renderFormulationModal(index,grams);
+        formulationModalOverlay.hidden=false;
+        document.body.style.overflow='hidden';
+        formulationModalClose.focus();
+    }
+
+    function closeFormulationModal() {
+        if (formulationModalOverlay.hidden) return;
+
+        formulationModalOverlay.hidden=true;
+        document.body.style.overflow='';
+        selectedFormulationIndex=null;
+
+        if (formulationModalPreviousFocus && typeof formulationModalPreviousFocus.focus==='function') {
+            formulationModalPreviousFocus.focus();
+        }
+        formulationModalPreviousFocus=null;
+    }
+
     function renderFormulationCards(rows,grams) {
         cardsEl.scrollTop=0;
         cardsEl.innerHTML='';
@@ -746,6 +818,9 @@
             const card=document.createElement('div');
             card.className='paint-color-card';
             card.dataset.formulationIndex=String(i);
+            card.tabIndex=0;
+            card.setAttribute('role','button');
+            card.setAttribute('aria-label',`Open details for Color ${i+1}`);
             card.innerHTML=`
                 <div class="paint-color-strip" style="background:rgb(${r},${g},${b});color:${fg}">
                     <span>Color ${i+1}</span><span>${row.coverage.toFixed(1)}%</span>
@@ -772,6 +847,15 @@
 
                     <div class="small paint-model-info">Predicted ΔE00: ${row.formulation.deltaE.toFixed(2)} · ${row.formulation.source}</div>
                 </div>`;
+
+            card.addEventListener('click',()=>openFormulationModal(i));
+            card.addEventListener('keydown',event=>{
+                if (event.key==='Enter' || event.key===' ') {
+                    event.preventDefault();
+                    openFormulationModal(i);
+                }
+            });
+
             cardsEl.appendChild(card);
         });
 
@@ -800,6 +884,10 @@
             if (yellowEl) yellowEl.textContent=`${amounts[1].toFixed(2)} g`;
             if (blueEl) blueEl.textContent=`${amounts[2].toFixed(2)} g`;
         });
+
+        if (selectedFormulationIndex !== null && !formulationModalOverlay.hidden) {
+            renderFormulationModal(selectedFormulationIndex,grams);
+        }
     }
 
     function renderManualCalculation(grams) {
@@ -828,6 +916,16 @@
     }
 
     function fmtLab(lab) { return `L* ${lab[0].toFixed(2)}, a* ${lab[1].toFixed(2)}, b* ${lab[2].toFixed(2)}`; }
+
+    formulationModalClose.addEventListener('click',closeFormulationModal);
+    formulationModalOverlay.addEventListener('click',event=>{
+        if (event.target===formulationModalOverlay) closeFormulationModal();
+    });
+    document.addEventListener('keydown',event=>{
+        if (event.key==='Escape' && !formulationModalOverlay.hidden) {
+            closeFormulationModal();
+        }
+    });
 
     focusModeSelect.addEventListener('change',()=> {
         if (focusModeSelect.value) applyTrackConstraint({focusMode:focusModeSelect.value});
