@@ -907,3 +907,133 @@ footer {
         text-align: left;
     }
 }
+
+
+/* -------------------------------------------------------------------------- */
+/* Browser camera controls                                                     */
+/* -------------------------------------------------------------------------- */
+
+.camera-controls-card {
+    margin: 0;
+    padding: 0.9rem 2rem;
+    background: #f9fbfd;
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+}
+
+.camera-controls-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-bottom: 0.75rem;
+}
+
+.camera-controls-heading p {
+    color: var(--muted);
+    font-size: 0.78rem;
+    margin-top: 0.15rem;
+}
+
+.camera-reset-btn {
+    background: var(--primary);
+    flex-shrink: 0;
+}
+
+.camera-controls-grid {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(155px, 1fr));
+    gap: 0.75rem;
+}
+
+.camera-control-block {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 0.7rem;
+    min-width: 0;
+}
+
+.camera-control-block > label {
+    display: block;
+    color: var(--primary);
+    font-size: 0.75rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    margin-bottom: 0.4rem;
+}
+
+.camera-control-block select {
+    width: 100%;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 0.38rem 0.45rem;
+    color: var(--text);
+    background: #fff;
+    margin-bottom: 0.45rem;
+}
+
+.camera-control-block select:disabled,
+.camera-control-block input:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+}
+
+.camera-slider-row {
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+}
+
+.camera-slider-row input[type="range"] {
+    min-width: 0;
+    flex: 1;
+    accent-color: var(--accent3);
+}
+
+.camera-slider-row span {
+    color: var(--primary);
+    font-size: 0.76rem;
+    font-variant-numeric: tabular-nums;
+    font-weight: 700;
+    min-width: 48px;
+    text-align: right;
+}
+
+.camera-control-block small {
+    display: block;
+    color: var(--muted);
+    font-size: 0.68rem;
+    line-height: 1.35;
+    margin-top: 0.35rem;
+}
+
+.postprocess-control {
+    border-color: rgba(0,132,173,0.35);
+    background: #f6fbfd;
+}
+
+.camera-capability-note {
+    margin-top: 0.65rem;
+    color: var(--muted);
+    font-size: 0.75rem;
+    line-height: 1.4;
+}
+
+@media (max-width: 1250px) {
+    .camera-controls-grid {
+        grid-template-columns: repeat(3, minmax(170px, 1fr));
+    }
+}
+
+@media (max-width: 800px) {
+    .camera-controls-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .camera-controls-card {
+        padding-left: 1rem;
+        padding-right: 1rem;
+    }
+}
