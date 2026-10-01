@@ -908,8 +908,18 @@
                     </div>
                 </section>
 
-                <div class="submission-actions">
-                    <button class="btn-action" id="submission-save-draft" type="button">Save Draft</button>
+                <div class="submission-actions submission-final-actions">
+                    <div class="submission-finalization-state" id="submission-finalization-state" aria-live="polite">
+                        Draft only - PDF not generated yet.
+                    </div>
+                    <div class="submission-final-action-buttons">
+                        <button class="btn-action submission-save-draft-btn" id="submission-save-draft" type="button">
+                            Save Draft
+                        </button>
+                        <button class="btn-action submission-finalize-btn" id="submission-finalize-pdf" type="button">
+                            Finalize Submission &amp; Generate PDF
+                        </button>
+                    </div>
                 </div>
             </section>
         </div>
@@ -1000,5 +1010,6 @@
     <script src="static/js/main.js"></script>
     <script src="static/js/formulation.js"></script>
     <script src="static/js/submission.js"></script>
+    <script src="static/js/submission_pdf.js"></script>
 </body>
 </html>

@@ -4387,3 +4387,84 @@ footer {
         min-height: 180px;
     }
 }
+
+
+/* -------------------------------------------------------------------------- */
+/* Final submission PDF action                                                  */
+/* -------------------------------------------------------------------------- */
+
+.submission-final-actions {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 2px solid var(--border);
+}
+
+.submission-finalization-state {
+    min-width: 0;
+    color: var(--muted);
+    font-size: 0.72rem;
+    line-height: 1.4;
+}
+
+.submission-finalization-state.is-success {
+    color: #1f7a4d;
+    font-weight: 700;
+}
+
+.submission-finalization-state.is-error {
+    color: #a63d34;
+    font-weight: 700;
+}
+
+.submission-final-action-buttons {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 0.55rem;
+    flex-shrink: 0;
+}
+
+.submission-save-draft-btn {
+    background: #fff;
+    color: var(--primary);
+    border: 1px solid var(--border);
+}
+
+.submission-finalize-btn {
+    min-width: 245px;
+    background: #1f7a4d;
+    box-shadow: 0 6px 16px rgba(31,122,77,0.18);
+}
+
+.submission-finalize-btn:hover:not(:disabled) {
+    filter: brightness(1.04);
+}
+
+.submission-finalize-btn:disabled {
+    opacity: 0.7;
+    cursor: wait;
+}
+
+@media (max-width: 820px) {
+    .submission-final-actions {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .submission-final-action-buttons {
+        width: 100%;
+        flex-direction: column;
+    }
+
+    .submission-final-action-buttons .btn-action {
+        width: 100%;
+    }
+
+    .submission-finalize-btn {
+        min-width: 0;
+    }
+}
