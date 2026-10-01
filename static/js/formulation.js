@@ -745,13 +745,13 @@
         return c;
     }
 
-    function showSourceCanvas(rawCanvas,label) {
+    function showSourceCanvas(rawCanvas,label,kind='image') {
         const canvas=applyImageAdjustments(rawCanvas);
         sourceCanvas.width=canvas.width; sourceCanvas.height=canvas.height;
         sourceCanvas.getContext('2d').drawImage(canvas,0,0);
         sourceCanvas.hidden=false; video.hidden=true; sourcePlaceholder.style.display='none';
         sourceLabel.textContent=label;
-        currentSource={rawCanvas,canvas,kind:'image',name:label};
+        currentSource={rawCanvas,canvas,kind,name:label};
         captureBtn.disabled=false;
         return canvas;
     }
@@ -1274,7 +1274,7 @@
         contrastValue.textContent=contrastInput.value;
         updateVideoFilter();
         if (currentSource && currentSource.rawCanvas) {
-            showSourceCanvas(currentSource.rawCanvas,currentSource.name);
+            showSourceCanvas(currentSource.rawCanvas,currentSource.name,currentSource.kind);
             statusEl.textContent='Image adjustment changed — analyze again';
         }
     }
@@ -1303,7 +1303,7 @@
             if (Object.keys(autoConstraints).length) await applyTrackConstraint(autoConstraints);
             await configureCameraControls();
         }
-        if (currentSource && currentSource.rawCanvas) showSourceCanvas(currentSource.rawCanvas,currentSource.name);
+        if (currentSource && currentSource.rawCanvas) showSourceCanvas(currentSource.rawCanvas,currentSource.name,currentSource.kind);
         statusEl.textContent='Controls reset';
     });
 
@@ -1328,9 +1328,9 @@
         let canvas;
         if (!video.hidden && video.srcObject) {
             const rawCanvas=createWorkingCanvasFromVideo();
-            canvas=showSourceCanvas(rawCanvas,'Camera capture');
+            canvas=showSourceCanvas(rawCanvas,'Camera capture','camera');
         } else if (currentSource && currentSource.rawCanvas) {
-            canvas=showSourceCanvas(currentSource.rawCanvas,currentSource.name);
+            canvas=showSourceCanvas(currentSource.rawCanvas,currentSource.name,currentSource.kind);
         } else return;
         await analyzeCanvas(canvas);
     });
@@ -1342,7 +1342,7 @@
         const img=new Image();
         img.onload=()=>{
             const rawCanvas=createWorkingCanvasFromImage(img);
-            const canvas=showSourceCanvas(rawCanvas,file.name);
+            const canvas=showSourceCanvas(rawCanvas,file.name,'image');
             URL.revokeObjectURL(url);
             analyzeCanvas(canvas);
         };
@@ -1385,6 +1385,181 @@
     totalGramsInput.addEventListener('input',updateAmountsFromTotalPaint);
     totalGramsInput.addEventListener('change',normalizeTotalPaintInput);
     totalGramsInput.addEventListener('blur',normalizeTotalPaintInput);
+
+    function captureCanvasForSubmission(canvas,maxDimension=960,quality=0.84) {
+        if (!canvas || !canvas.width || !canvas.height) return null;
+
+        const scale=Math.min(1,maxDimension/Math.max(canvas.width,canvas.height));
+        const width=Math.max(1,Math.round(canvas.width*scale));
+        const height=Math.max(1,Math.round(canvas.height*scale));
+        const out=document.createElement('canvas');
+        out.width=width;
+        out.height=height;
+        out.getContext('2d').drawImage(canvas,0,0,width,height);
+
+        return {
+            dataUrl:out.toDataURL('image/jpeg',quality),
+            width:canvas.width,
+            height:canvas.height,
+            previewWidth:width,
+            previewHeight:height
+        };
+    }
+
+    function captureKMeansBaseForSubmission() {
+        if (!lastKMeansRender || !lastKMeansRender.baseImageData) return null;
+        const canvas=document.createElement('canvas');
+        canvas.width=lastKMeansRender.width;
+        canvas.height=lastKMeansRender.height;
+        canvas.getContext('2d').putImageData(lastKMeansRender.baseImageData,0,0);
+        return captureCanvasForSubmission(canvas);
+    }
+
+    function getCameraSnapshotForSubmission() {
+        let settings={};
+        try {
+            settings=cameraTrack && typeof cameraTrack.getSettings==='function'
+                ? cameraTrack.getSettings() || {}
+                : {};
+        } catch (error) {
+            settings={};
+        }
+
+        const selectedOption=cameraSelect && cameraSelect.selectedOptions.length
+            ? cameraSelect.selectedOptions[0]
+            : null;
+
+        return {
+            selectedDeviceId:settings.deviceId || (cameraSelect ? cameraSelect.value : '') || '',
+            selectedCameraLabel:selectedOption ? selectedOption.textContent : '',
+            actualSettings:{
+                width:Number.isFinite(settings.width) ? settings.width : null,
+                height:Number.isFinite(settings.height) ? settings.height : null,
+                frameRate:Number.isFinite(settings.frameRate) ? settings.frameRate : null,
+                focusMode:settings.focusMode ?? null,
+                focusDistance:Number.isFinite(settings.focusDistance) ? settings.focusDistance : null,
+                exposureMode:settings.exposureMode ?? null,
+                exposureCompensation:Number.isFinite(settings.exposureCompensation) ? settings.exposureCompensation : null,
+                exposureTime:Number.isFinite(settings.exposureTime) ? settings.exposureTime : null,
+                whiteBalanceMode:settings.whiteBalanceMode ?? null,
+                colorTemperature:Number.isFinite(settings.colorTemperature) ? settings.colorTemperature : null
+            },
+            requestedControls:{
+                focusMode:focusModeSelect && !focusModeSelect.disabled ? focusModeSelect.value : null,
+                focusDistance:focusInput && !focusInput.disabled ? Number(focusInput.value) : null,
+                exposureMode:exposureModeSelect && !exposureModeSelect.disabled ? exposureModeSelect.value : null,
+                exposureControl:exposureInput && !exposureInput.disabled
+                    ? {
+                        type:exposureInput.dataset.constraint || null,
+                        value:Number(exposureInput.value)
+                    }
+                    : null,
+                whiteBalanceMode:wbModeSelect && !wbModeSelect.disabled ? wbModeSelect.value : null,
+                colorTemperature:wbInput && !wbInput.disabled ? Number(wbInput.value) : null
+            }
+        };
+    }
+
+    function getPaintSubmissionSnapshot() {
+        const grams=parseFloat(totalGramsInput.value);
+
+        if (
+            !currentSource ||
+            !lastFormulationRows ||
+            !lastFormulationRows.length ||
+            !lastKMeansRender ||
+            !(grams>0)
+        ) {
+            return null;
+        }
+
+        const formulations=lastFormulationRows.map((row,index)=>{
+            const recipe=row.formulation.recipe.map(Number);
+            const amounts=recipe.map(percent=>grams*percent/100);
+
+            return {
+                index,
+                label:`Color ${index+1}`,
+                coveragePercent:Number(row.coverage.toFixed(4)),
+                pixelCount:row.count,
+                rgb:row.rgb.map(Number),
+                cameraLab:row.cameraLab.map(Number),
+                nixEquivalentLab:row.nixLab.map(Number),
+                formulation:{
+                    recipePercent:{
+                        red:recipe[0],
+                        yellow:recipe[1],
+                        blue:recipe[2]
+                    },
+                    grams:{
+                        red:Number(amounts[0].toFixed(4)),
+                        yellow:Number(amounts[1].toFixed(4)),
+                        blue:Number(amounts[2].toFixed(4))
+                    },
+                    predictedLab:row.formulation.predictedLab.map(Number),
+                    predictedDeltaE00:Number(row.formulation.deltaE),
+                    source:row.formulation.source
+                }
+            };
+        });
+
+        let manualLab=null;
+        if (lastManualCalculation) {
+            const {L,a,b,formulation}=lastManualCalculation;
+            const recipe=formulation.recipe.map(Number);
+            const amounts=recipe.map(percent=>grams*percent/100);
+            manualLab={
+                targetLab:[L,a,b],
+                targetPreviewRgb:labToRgbDisplay(L,a,b),
+                formulation:{
+                    recipePercent:{
+                        red:recipe[0],
+                        yellow:recipe[1],
+                        blue:recipe[2]
+                    },
+                    grams:{
+                        red:Number(amounts[0].toFixed(4)),
+                        yellow:Number(amounts[1].toFixed(4)),
+                        blue:Number(amounts[2].toFixed(4))
+                    },
+                    predictedLab:formulation.predictedLab.map(Number),
+                    predictedDeltaE00:Number(formulation.deltaE),
+                    source:formulation.source
+                }
+            };
+        }
+
+        return {
+            capturedAt:new Date().toISOString(),
+            source:{
+                kind:currentSource.kind || 'image',
+                name:currentSource.name || sourceLabel.textContent || '',
+                image:captureCanvasForSubmission(sourceCanvas)
+            },
+            kMeans:{
+                colors:parseInt(kSelect.value,10),
+                resultImage:captureKMeansBaseForSubmission()
+            },
+            totalPaintGrams:grams,
+            imageAdjustments:{
+                brightness:Number(brightnessInput.value),
+                contrast:Number(contrastInput.value)
+            },
+            camera:getCameraSnapshotForSubmission(),
+            formulations,
+            manualLab
+        };
+    }
+
+    window.SkillosaicPaint=Object.freeze({
+        getSubmissionSnapshot:getPaintSubmissionSnapshot,
+        hasResult:()=>Boolean(
+            currentSource &&
+            lastFormulationRows &&
+            lastFormulationRows.length &&
+            lastKMeansRender
+        )
+    });
 
     function resizeVisibleCanvases() {}
 
