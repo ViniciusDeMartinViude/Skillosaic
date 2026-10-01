@@ -1545,7 +1545,7 @@
                 brightness:Number(brightnessInput.value),
                 contrast:Number(contrastInput.value)
             },
-            camera:getCameraSnapshotForSubmission(),
+            camera:currentSource.kind==='camera' ? getCameraSnapshotForSubmission() : null,
             formulations,
             manualLab
         };
