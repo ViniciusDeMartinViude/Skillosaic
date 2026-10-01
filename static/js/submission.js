@@ -99,6 +99,7 @@
     const verificationScoreEl = document.getElementById('submission-verification-score');
 
     const closingStatusEl = document.getElementById('submission-closing-status');
+    const closingUploadOpenBtn = document.getElementById('submission-closing-upload-open');
     const closingFileInput = document.getElementById('submission-closing-file');
     const closingCameraOpenBtn = document.getElementById('submission-closing-camera-open');
     const closingCameraEl = document.getElementById('submission-closing-camera');
@@ -1713,7 +1714,16 @@
     }
 
     async function startClosingCamera() {
-        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        if (!window.isSecureContext) {
+            if (closingStatusEl) {
+                closingStatusEl.textContent='Camera access requires HTTPS or localhost.';
+                closingStatusEl.classList.remove('is-success');
+                closingStatusEl.classList.add('is-error');
+            }
+            return;
+        }
+
+        if (!navigator.mediaDevices || typeof navigator.mediaDevices.getUserMedia!=='function') {
             if (closingStatusEl) {
                 closingStatusEl.textContent='Camera access is not available in this browser.';
                 closingStatusEl.classList.remove('is-success');
@@ -1724,19 +1734,84 @@
 
         stopClosingCamera();
 
+        // If Paint Formulation still owns the webcam, release it before requesting
+        // a new stream for the Closing evidence photo.
         try {
-            closingCameraStream=await navigator.mediaDevices.getUserMedia({
+            const paintApi=window.SkillosaicPaint;
+            if (paintApi && typeof paintApi.releaseCameraForExternalCapture==='function') {
+                paintApi.releaseCameraForExternalCapture();
+            }
+        } catch (error) {
+            console.warn('[Skillosaic] Could not release Paint Formulation camera:',error);
+        }
+
+        if (closingCameraOpenBtn) {
+            closingCameraOpenBtn.disabled=true;
+            closingCameraOpenBtn.textContent='Opening Camera…';
+        }
+        if (closingStatusEl) {
+            closingStatusEl.textContent='Requesting camera access…';
+            closingStatusEl.classList.remove('is-success','is-error');
+        }
+
+        const attempts=[
+            {
                 video:{
-                    width:{ideal:1920},
-                    height:{ideal:1080},
-                    facingMode:{ideal:'environment'}
+                    width:{ideal:1280},
+                    height:{ideal:720}
                 },
                 audio:false
-            });
+            },
+            {
+                video:true,
+                audio:false
+            }
+        ];
 
+        let lastError=null;
+
+        for (const constraints of attempts) {
+            try {
+                closingCameraStream=await navigator.mediaDevices.getUserMedia(constraints);
+                break;
+            } catch (error) {
+                lastError=error;
+                closingCameraStream=null;
+            }
+        }
+
+        if (!closingCameraStream) {
+            stopClosingCamera();
+
+            if (closingCameraOpenBtn) {
+                closingCameraOpenBtn.disabled=false;
+                closingCameraOpenBtn.textContent='Use Camera';
+            }
+
+            if (closingStatusEl) {
+                const name=lastError && lastError.name ? lastError.name : 'CameraError';
+                const message=lastError && lastError.message ? lastError.message : 'Unable to open camera.';
+                closingStatusEl.textContent=`Camera could not be opened (${name}): ${message}`;
+                closingStatusEl.classList.remove('is-success');
+                closingStatusEl.classList.add('is-error');
+            }
+            return;
+        }
+
+        try {
             closingVideoEl.srcObject=closingCameraStream;
             closingCameraEl.hidden=false;
-            closingCameraOpenBtn.textContent='Restart Camera';
+
+            // Explicit play() makes the behavior more reliable on Chromium-based browsers.
+            const playResult=closingVideoEl.play();
+            if (playResult && typeof playResult.then==='function') {
+                await playResult;
+            }
+
+            if (closingCameraOpenBtn) {
+                closingCameraOpenBtn.disabled=false;
+                closingCameraOpenBtn.textContent='Restart Camera';
+            }
 
             if (closingStatusEl) {
                 closingStatusEl.textContent='Camera ready. Frame the complete workspace and take the photo.';
@@ -1744,8 +1819,14 @@
             }
         } catch (error) {
             stopClosingCamera();
+
+            if (closingCameraOpenBtn) {
+                closingCameraOpenBtn.disabled=false;
+                closingCameraOpenBtn.textContent='Use Camera';
+            }
+
             if (closingStatusEl) {
-                closingStatusEl.textContent='Camera access was denied or the camera could not be opened.';
+                closingStatusEl.textContent=`Camera stream opened but the preview could not start: ${error.message || error.name}`;
                 closingStatusEl.classList.remove('is-success');
                 closingStatusEl.classList.add('is-error');
             }
@@ -1997,6 +2078,12 @@
 
     if (verificationCalculateBtn) {
         verificationCalculateBtn.addEventListener('click',calculateVerification);
+    }
+
+    if (closingUploadOpenBtn && closingFileInput) {
+        closingUploadOpenBtn.addEventListener('click',()=>{
+            closingFileInput.click();
+        });
     }
 
     if (closingFileInput) {
