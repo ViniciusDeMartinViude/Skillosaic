@@ -1521,3 +1521,81 @@ footer {
         background: #7f98ad;
     }
 }
+
+
+/* -------------------------------------------------------------------------- */
+/* Ensure paint quantities are always visible in formulation cards             */
+/* -------------------------------------------------------------------------- */
+
+.paint-amount-section {
+    border-top: 1px solid var(--border);
+    margin-top: 0.15rem;
+    padding-top: 0.4rem;
+}
+
+.paint-total-label {
+    color: var(--primary);
+    font-size: 0.78rem;
+    margin-bottom: 0.3rem;
+}
+
+.paint-amount-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.3rem;
+}
+
+.paint-amount-grid > div {
+    background: #f2f7fb;
+    border: 1px solid #dce6ef;
+    border-radius: 6px;
+    padding: 0.32rem 0.25rem;
+    text-align: center;
+    min-width: 0;
+}
+
+.paint-amount-grid span {
+    display: block;
+    color: var(--muted);
+    font-size: 0.7rem;
+    line-height: 1.1;
+}
+
+.paint-amount-grid strong {
+    display: block;
+    color: var(--primary);
+    font-size: 0.86rem;
+    line-height: 1.2;
+    margin-top: 0.12rem;
+    white-space: nowrap;
+}
+
+@media (min-width: 1400px) and (min-height: 800px) {
+    #paint-app .paint-palette-cards {
+        grid-auto-rows: minmax(188px, auto);
+    }
+
+    #paint-app .paint-color-card {
+        min-height: 188px;
+    }
+
+    #paint-app .paint-color-card-body {
+        gap: 0.3rem;
+    }
+
+    #paint-app .paint-total-label {
+        font-size: 0.78rem;
+    }
+
+    #paint-app .paint-amount-grid span {
+        font-size: 0.7rem;
+    }
+
+    #paint-app .paint-amount-grid strong {
+        font-size: 0.88rem;
+    }
+
+    #paint-app .paint-model-info {
+        margin-top: 0.05rem;
+    }
+}
