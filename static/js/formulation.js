@@ -1691,10 +1691,27 @@
         };
     }
 
+    function releaseCameraForExternalCapture() {
+        if (cameraStream) {
+            cameraStream.getTracks().forEach(track=>track.stop());
+            cameraStream=null;
+        }
+        cameraTrack=null;
+
+        if (video) {
+            video.srcObject=null;
+        }
+
+        if (statusEl) {
+            statusEl.textContent='Camera released for submission photo';
+        }
+    }
+
     window.SkillosaicPaint=Object.freeze({
         getSubmissionSnapshot:getPaintSubmissionSnapshot,
         getSelectedTestColor:getSelectedTestColorSnapshot,
         hasSelectedTestColor:()=>Boolean(getSelectedTestColorSnapshot()),
+        releaseCameraForExternalCapture,
         hasResult:()=>Boolean(
             currentSource &&
             lastFormulationRows &&
