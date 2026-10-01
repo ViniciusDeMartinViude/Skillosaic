@@ -223,56 +223,65 @@
             </div>
         </section>
 
-        <section class="manual-lab-card manual-lab-strip">
-            <div class="manual-lab-copy">
-                <span class="panel-label">Manual LAB Formulation</span>
-                <h2>Nix 3 / external LAB → R / Y / B</h2>
-                <p>Nix LAB bypasses camera correction and goes directly to the paint model.</p>
-            </div>
-            <div class="manual-lab-form compact">
-                <label>L* <input id="manual-L" type="number" step="0.01" /></label>
-                <label>a* <input id="manual-a" type="number" step="0.01" /></label>
-                <label>b* <input id="manual-b" type="number" step="0.01" /></label>
-                <button class="btn-action" id="manual-calculate">Calculate</button>
-            </div>
-            <div id="manual-result" class="manual-result">
-                Enter LAB values and the total paint amount above.
-            </div>
-        </section>
+        <section class="paint-main-row paint-main-three-columns">
+            <article class="paint-card paint-input-column">
+                <div class="paint-card-header">
+                    <div>
+                        <span class="panel-label">Source</span>
+                        <strong id="paint-source-label">Camera / image</strong>
+                    </div>
+                </div>
+                <div class="paint-media-frame">
+                    <video id="paint-video" autoplay playsinline muted></video>
+                    <canvas id="paint-source-canvas" hidden></canvas>
+                    <div class="paint-placeholder" id="paint-source-placeholder">
+                        Start the camera or load an image.
+                    </div>
+                </div>
+            </article>
 
-        <section class="paint-main-row">
-            <section class="paint-grid">
-                <article class="paint-card">
-                    <div class="paint-card-header">
-                        <div>
-                            <span class="panel-label">Source</span>
-                            <strong id="paint-source-label">Camera / image</strong>
-                        </div>
+            <article class="paint-card paint-processed-column">
+                <div class="paint-card-header">
+                    <div>
+                        <span class="panel-label">K-Means Result</span>
+                        <strong>Representative colors</strong>
                     </div>
-                    <div class="paint-media-frame">
-                        <video id="paint-video" autoplay playsinline muted></video>
-                        <canvas id="paint-source-canvas" hidden></canvas>
-                        <div class="paint-placeholder" id="paint-source-placeholder">
-                            Start the camera or load an image.
-                        </div>
+                </div>
+                <div class="paint-media-frame">
+                    <canvas id="paint-result-canvas"></canvas>
+                    <div class="paint-placeholder" id="paint-result-placeholder">
+                        Analyze an image to generate the reduced-color result.
                     </div>
-                </article>
+                </div>
+            </article>
 
-                <article class="paint-card">
-                    <div class="paint-card-header">
-                        <div>
-                            <span class="panel-label">K-Means Result</span>
-                            <strong>Representative colors</strong>
-                        </div>
+            <article class="manual-lab-card manual-lab-column">
+                <div class="manual-lab-copy">
+                    <span class="panel-label">Manual LAB Formulation</span>
+                    <h2>Nix 3 / external LAB → R / Y / B</h2>
+                    <p>Enter LAB from Nix or another calibrated source.</p>
+                </div>
+
+                <div class="manual-lab-form compact manual-lab-form-column">
+                    <label>L* <input id="manual-L" type="number" step="0.01" /></label>
+                    <label>a* <input id="manual-a" type="number" step="0.01" /></label>
+                    <label>b* <input id="manual-b" type="number" step="0.01" /></label>
+                    <button class="btn-action" id="manual-calculate">Calculate</button>
+                </div>
+
+                <div class="manual-color-preview">
+                    <div id="manual-lab-swatch" class="manual-lab-swatch" aria-label="LAB color preview"></div>
+                    <div class="manual-color-preview-copy">
+                        <span>Target color</span>
+                        <strong id="manual-target-lab">Enter LAB values</strong>
+                        <small>sRGB preview of the entered LAB</small>
                     </div>
-                    <div class="paint-media-frame">
-                        <canvas id="paint-result-canvas"></canvas>
-                        <div class="paint-placeholder" id="paint-result-placeholder">
-                            Analyze an image to generate the reduced-color result.
-                        </div>
-                    </div>
-                </article>
-            </section>
+                </div>
+
+                <div id="manual-result" class="manual-result manual-result-structured">
+                    Enter LAB values and calculate the paint formulation.
+                </div>
+            </article>
         </section>
 
         <section class="paint-palette-section">
