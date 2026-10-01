@@ -1858,6 +1858,7 @@
         }
 
         if (currentDraft && currentDraft.token !== token) {
+            stopClosingCamera();
             saveIdentificationNow();
         }
 
