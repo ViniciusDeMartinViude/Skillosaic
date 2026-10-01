@@ -42,6 +42,22 @@
     const manualLabSwatch = document.getElementById('manual-lab-swatch');
     const manualTargetLab = document.getElementById('manual-target-lab');
 
+    const manualLabModalOverlay = document.getElementById('manual-lab-modal-overlay');
+    const manualLabModalClose = document.getElementById('manual-lab-modal-close');
+    const manualLabModalSwatch = document.getElementById('manual-lab-modal-swatch');
+    const manualLabModalTarget = document.getElementById('manual-lab-modal-target');
+    const manualLabModalTargetLab = document.getElementById('manual-lab-modal-target-lab');
+    const manualLabModalPredictedLab = document.getElementById('manual-lab-modal-predicted-lab');
+    const manualLabModalDeltaE = document.getElementById('manual-lab-modal-deltae');
+    const manualLabModalTotal = document.getElementById('manual-lab-modal-total');
+    const manualLabModalRedPercent = document.getElementById('manual-lab-modal-red-percent');
+    const manualLabModalYellowPercent = document.getElementById('manual-lab-modal-yellow-percent');
+    const manualLabModalBluePercent = document.getElementById('manual-lab-modal-blue-percent');
+    const manualLabModalRedGrams = document.getElementById('manual-lab-modal-red-grams');
+    const manualLabModalYellowGrams = document.getElementById('manual-lab-modal-yellow-grams');
+    const manualLabModalBlueGrams = document.getElementById('manual-lab-modal-blue-grams');
+    const manualLabModalSource = document.getElementById('manual-lab-modal-source');
+
     const focusModeSelect = document.getElementById('camera-focus-mode');
     const focusInput = document.getElementById('camera-focus');
     const focusValue = document.getElementById('camera-focus-value');
@@ -84,6 +100,7 @@
     let lastManualCalculation = null;
     let selectedFormulationIndex = null;
     let formulationModalPreviousFocus = null;
+    let manualLabModalPreviousFocus = null;
 
     const RECIPES = [
         [100,0,0],[0,100,0],[0,0,100],[50,50,0],[0,50,50],[33,33,34],
@@ -934,6 +951,54 @@
         manualTargetLab.textContent=`L* ${L.toFixed(2)} · a* ${a.toFixed(2)} · b* ${b.toFixed(2)}`;
     }
 
+    function renderManualLabModal(grams) {
+        if (!lastManualCalculation || !(grams>0)) return;
+
+        const {L,a,b,formulation}=lastManualCalculation;
+        const recipe=formulation.recipe;
+        const amounts=recipe.map(p=>grams*p/100);
+        const rgb=labToRgbDisplay(L,a,b);
+
+        manualLabModalSwatch.style.background=`rgb(${rgb[0]}, ${rgb[1]}, ${rgb[2]})`;
+        manualLabModalTarget.textContent=`sRGB preview: ${rgb[0]}, ${rgb[1]}, ${rgb[2]}`;
+        manualLabModalTargetLab.textContent=fmtLab([L,a,b]);
+        manualLabModalPredictedLab.textContent=fmtLab(formulation.predictedLab);
+        manualLabModalDeltaE.textContent=formulation.deltaE.toFixed(2);
+        manualLabModalTotal.textContent=`${Math.round(grams)} g`;
+
+        manualLabModalRedPercent.textContent=`${recipe[0].toFixed(1)}%`;
+        manualLabModalYellowPercent.textContent=`${recipe[1].toFixed(1)}%`;
+        manualLabModalBluePercent.textContent=`${recipe[2].toFixed(1)}%`;
+
+        manualLabModalRedGrams.textContent=`${amounts[0].toFixed(2)} g`;
+        manualLabModalYellowGrams.textContent=`${amounts[1].toFixed(2)} g`;
+        manualLabModalBlueGrams.textContent=`${amounts[2].toFixed(2)} g`;
+        manualLabModalSource.textContent=formulation.source;
+    }
+
+    function openManualLabModal() {
+        const grams=parseFloat(totalGramsInput.value);
+        if (!lastManualCalculation || !(grams>0)) return;
+
+        manualLabModalPreviousFocus=document.activeElement;
+        renderManualLabModal(grams);
+        manualLabModalOverlay.hidden=false;
+        document.body.style.overflow='hidden';
+        manualLabModalClose.focus();
+    }
+
+    function closeManualLabModal() {
+        if (manualLabModalOverlay.hidden) return;
+
+        manualLabModalOverlay.hidden=true;
+        document.body.style.overflow='';
+
+        if (manualLabModalPreviousFocus && typeof manualLabModalPreviousFocus.focus==='function') {
+            manualLabModalPreviousFocus.focus();
+        }
+        manualLabModalPreviousFocus=null;
+    }
+
     function renderManualCalculation(grams) {
         if (!lastManualCalculation || !(grams>0)) return;
 
@@ -969,7 +1034,17 @@
                     <strong>Predicted LAB:</strong> ${fmtLab(formulation.predictedLab)}<br>
                     <strong>Source:</strong> ${formulation.source}
                 </div>
+                <span class="manual-result-open-hint">Click for enlarged details</span>
             </div>`;
+
+        manualResult.classList.add('has-result');
+        manualResult.tabIndex=0;
+        manualResult.setAttribute('role','button');
+        manualResult.setAttribute('aria-label','Open manual LAB formulation details');
+
+        if (!manualLabModalOverlay.hidden) {
+            renderManualLabModal(grams);
+        }
     }
 
     function updateAmountsFromTotalPaint() {
@@ -983,6 +1058,27 @@
     }
 
     function fmtLab(lab) { return `L* ${lab[0].toFixed(2)}, a* ${lab[1].toFixed(2)}, b* ${lab[2].toFixed(2)}`; }
+
+    manualResult.addEventListener('click',()=>{
+        if (lastManualCalculation) openManualLabModal();
+    });
+    manualResult.addEventListener('keydown',event=>{
+        if (!lastManualCalculation) return;
+        if (event.key==='Enter' || event.key===' ') {
+            event.preventDefault();
+            openManualLabModal();
+        }
+    });
+
+    manualLabModalClose.addEventListener('click',closeManualLabModal);
+    manualLabModalOverlay.addEventListener('click',event=>{
+        if (event.target===manualLabModalOverlay) closeManualLabModal();
+    });
+    document.addEventListener('keydown',event=>{
+        if (event.key==='Escape' && !manualLabModalOverlay.hidden) {
+            closeManualLabModal();
+        }
+    });
 
     formulationModalClose.addEventListener('click',closeFormulationModal);
     formulationModalOverlay.addEventListener('click',event=>{
