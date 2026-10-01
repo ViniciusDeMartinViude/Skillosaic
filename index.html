@@ -428,6 +428,68 @@
         </div>
     </div>
 
+    <!-- Floating submission launcher -->
+    <button class="submission-fab" id="submission-fab" type="button" aria-haspopup="dialog" aria-controls="submission-modal">
+        <span class="submission-fab-icon" aria-hidden="true">✓</span>
+        <span>Submission</span>
+    </button>
+
+    <!-- Submission form modal -->
+    <div class="modal-overlay submission-modal-overlay" id="submission-modal-overlay" hidden>
+        <div class="modal submission-modal" id="submission-modal" role="dialog" aria-modal="true" aria-labelledby="submission-modal-title">
+            <button class="modal-close" id="submission-modal-close" aria-label="Close submission form">&times;</button>
+
+            <div class="submission-modal-header">
+                <div>
+                    <span class="panel-label">Submission Form</span>
+                    <h2 id="submission-modal-title">Competitor submission</h2>
+                    <p>
+                        This form is stored locally in this browser. A token identifies each individual submission draft.
+                    </p>
+                </div>
+            </div>
+
+            <section class="submission-token-section">
+                <label for="submission-token">Submission token</label>
+                <div class="submission-token-row">
+                    <input
+                        id="submission-token"
+                        type="text"
+                        autocomplete="off"
+                        spellcheck="false"
+                        placeholder="Enter the token provided for this submission"
+                    />
+                    <button class="btn-action" id="submission-open-token" type="button">Open / Create</button>
+                </div>
+                <div class="submission-token-help">
+                    The token is used only to separate drafts stored in this browser.
+                </div>
+                <div class="submission-token-status" id="submission-token-status" aria-live="polite"></div>
+            </section>
+
+            <section class="submission-workspace" id="submission-workspace" hidden>
+                <div class="submission-workspace-header">
+                    <div>
+                        <span class="panel-label">Current draft</span>
+                        <h3 id="submission-current-token">—</h3>
+                    </div>
+                    <div class="submission-save-state" id="submission-save-state">Saved locally</div>
+                </div>
+
+                <div class="submission-placeholder">
+                    <strong>Submission fields will be added here.</strong>
+                    <p>
+                        The storage structure and token-based draft loading are already prepared for the form details you provide next.
+                    </p>
+                </div>
+
+                <div class="submission-actions">
+                    <button class="btn-action" id="submission-save-draft" type="button">Save Draft</button>
+                </div>
+            </section>
+        </div>
+    </div>
+
     <!-- About modal -->
     <div class="modal-overlay" id="modal-overlay" hidden>
         <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title">
@@ -484,5 +546,6 @@
     <script src="static/js/jspdf.umd.min.js"></script>
     <script src="static/js/main.js"></script>
     <script src="static/js/formulation.js"></script>
+    <script src="static/js/submission.js"></script>
 </body>
 </html>
