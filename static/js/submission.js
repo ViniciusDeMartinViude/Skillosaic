@@ -65,6 +65,22 @@
     const testColorTotalEl = document.getElementById('submission-test-color-total');
     const testColorSourceEl = document.getElementById('submission-test-color-source');
 
+    const weighingTargetEl = document.getElementById('submission-weighing-target');
+    const weighingTargetSwatchEl = document.getElementById('submission-weighing-target-swatch');
+    const weighingTargetLabelEl = document.getElementById('submission-weighing-target-label');
+    const weighingTargetTotalEl = document.getElementById('submission-weighing-target-total');
+    const weighingStatusEl = document.getElementById('submission-weighing-status');
+    const weighingPaintsEl = document.getElementById('submission-weighing-paints');
+    const weighingConfirmationLabelEl = document.getElementById('submission-weighing-confirmation-label');
+    const weighingConfirmationTimeEl = document.getElementById('submission-weighing-confirmation-time');
+    const requestExpertConfirmationBtn = document.getElementById('submission-request-expert-confirmation');
+
+    const expertWeighingOverlay = document.getElementById('expert-weighing-modal-overlay');
+    const expertWeighingCloseBtn = document.getElementById('expert-weighing-modal-close');
+    const expertWeighingSummaryEl = document.getElementById('expert-weighing-summary');
+    const expertWeighingConfirmBtn = document.getElementById('expert-weighing-confirm');
+    const expertWeighingRejectBtn = document.getElementById('expert-weighing-reject');
+
     if (!fab || !overlay || !modal) return;
 
     let currentDraft = null;
@@ -72,6 +88,14 @@
     let ppeConfirmation = '';
     let isPopulatingIdentification = false;
     let autoSaveTimer = null;
+    let expertWeighingPreviousFocus = null;
+
+    const PAINT_CODE_PATTERN = /^[A-Z]\d{4}[A-Z]$/;
+    const PAINT_META = {
+        red: {label:'Red', cssClass:'red'},
+        yellow: {label:'Yellow', cssClass:'yellow'},
+        blue: {label:'Blue', cssClass:'blue'}
+    };
 
     function nowIso() {
         return new Date().toISOString();
@@ -123,7 +147,8 @@
                 },
                 imageKMeansPalette: null,
                 paintFormulation: null,
-                testColor: null
+                testColor: null,
+                weighing: null
             }
         };
     }
@@ -800,9 +825,11 @@
             ? currentDraft.fields
             : {};
         currentDraft.fields.testColor=snapshot;
+        currentDraft.fields.weighing=null;
 
         const saved=saveCurrentDraft();
         renderCapturedTestColor(snapshot);
+        renderWeighing(snapshot,null);
 
         if (!saved) {
             testColorCaptureStatusEl.textContent=
@@ -810,6 +837,428 @@
             testColorCaptureStatusEl.classList.remove('is-success');
             testColorCaptureStatusEl.classList.add('is-error');
         }
+    }
+
+    function normalizePaintCode(value) {
+        return String(value || '')
+            .toUpperCase()
+            .replace(/\s+/g,'')
+            .slice(0,6);
+    }
+
+    function testColorSignature(testColor) {
+        if (!testColor || typeof testColor !== 'object') return '';
+        const recipe=testColor.formulation?.recipePercent || {};
+        const target=Array.isArray(testColor.targetLab) ? testColor.targetLab : [];
+        return JSON.stringify({
+            index:testColor.index,
+            target,
+            totalPaintGrams:Number(testColor.totalPaintGrams || 0),
+            red:Number(recipe.red || 0),
+            yellow:Number(recipe.yellow || 0),
+            blue:Number(recipe.blue || 0)
+        });
+    }
+
+    function usedPaintsFromTestColor(testColor) {
+        if (!testColor || !testColor.formulation) return [];
+        const recipe=testColor.formulation.recipePercent || {};
+        const grams=testColor.formulation.grams || {};
+
+        return ['red','yellow','blue']
+            .filter(key=>Number(recipe[key] || 0) > 0.0001)
+            .map(key=>({
+                key,
+                label:PAINT_META[key].label,
+                percent:Number(recipe[key] || 0),
+                grams:Number(grams[key] || 0)
+            }));
+    }
+
+    function createWeighingState(testColor) {
+        const paints={};
+        usedPaintsFromTestColor(testColor).forEach(paint=>{
+            paints[paint.key]={
+                code:'',
+                expectedGrams:paint.grams,
+                recipePercent:paint.percent
+            };
+        });
+
+        return {
+            testColorSignature:testColorSignature(testColor),
+            paints,
+            confirmation:{
+                status:'not_requested',
+                requestedAt:null,
+                confirmedAt:null,
+                rejectedAt:null
+            }
+        };
+    }
+
+    function normalizeWeighingState(testColor,weighing) {
+        const signature=testColorSignature(testColor);
+        if (!signature) return null;
+
+        if (
+            !weighing ||
+            typeof weighing!=='object' ||
+            weighing.testColorSignature!==signature
+        ) {
+            return createWeighingState(testColor);
+        }
+
+        weighing.paints=weighing.paints && typeof weighing.paints==='object'
+            ? weighing.paints
+            : {};
+
+        usedPaintsFromTestColor(testColor).forEach(paint=>{
+            const existing=weighing.paints[paint.key] || {};
+            weighing.paints[paint.key]={
+                code:normalizePaintCode(existing.code || ''),
+                expectedGrams:paint.grams,
+                recipePercent:paint.percent
+            };
+        });
+
+        weighing.confirmation=weighing.confirmation && typeof weighing.confirmation==='object'
+            ? weighing.confirmation
+            : {
+                status:'not_requested',
+                requestedAt:null,
+                confirmedAt:null,
+                rejectedAt:null
+            };
+
+        return weighing;
+    }
+
+    function allWeighingCodesValid(weighing,testColor) {
+        if (!weighing || !testColor) return false;
+        const paints=usedPaintsFromTestColor(testColor);
+        if (!paints.length) return false;
+
+        return paints.every(paint=>{
+            const code=normalizePaintCode(weighing.paints?.[paint.key]?.code || '');
+            return PAINT_CODE_PATTERN.test(code);
+        });
+    }
+
+    function saveWeighingState(weighing) {
+        if (!currentDraft) return false;
+        currentDraft.fields=currentDraft.fields && typeof currentDraft.fields==='object'
+            ? currentDraft.fields
+            : {};
+        currentDraft.fields.weighing=weighing;
+        return saveCurrentDraft();
+    }
+
+    function updateWeighingStatus(testColor,weighing) {
+        const confirmation=weighing?.confirmation || {};
+        const status=confirmation.status || 'not_requested';
+        const valid=allWeighingCodesValid(weighing,testColor);
+
+        if (weighingStatusEl) {
+            weighingStatusEl.classList.remove('is-success','is-error');
+
+            if (!testColor) {
+                weighingStatusEl.textContent='Capture a test color in Step 4 before entering paint codes.';
+            } else if (status==='confirmed') {
+                weighingStatusEl.textContent='Expert confirmed the paint codes and expected weights. Ready to mix.';
+                weighingStatusEl.classList.add('is-success');
+            } else if (status==='pending') {
+                weighingStatusEl.textContent='Expert confirmation requested. Paint codes are locked until the Expert responds.';
+            } else if (status==='rejected') {
+                weighingStatusEl.textContent='Expert requested a correction. Review the paint cans, correct the codes, and request confirmation again.';
+                weighingStatusEl.classList.add('is-error');
+            } else if (valid) {
+                weighingStatusEl.textContent='All required paint codes are valid. Ready to request Expert confirmation.';
+                weighingStatusEl.classList.add('is-success');
+            } else {
+                weighingStatusEl.textContent='Enter a valid code for every paint used in the selected recipe.';
+            }
+        }
+
+        if (weighingConfirmationLabelEl) {
+            const labels={
+                not_requested:'Not requested',
+                pending:'Waiting for Expert',
+                confirmed:'Confirmed by Expert',
+                rejected:'Needs correction'
+            };
+            weighingConfirmationLabelEl.textContent=labels[status] || 'Not requested';
+            weighingConfirmationLabelEl.className='';
+            weighingConfirmationLabelEl.classList.add(`status-${status}`);
+        }
+
+        if (weighingConfirmationTimeEl) {
+            let message='The Expert must check the paint codes and expected weights before mixing.';
+            const timestamp=
+                status==='confirmed' ? confirmation.confirmedAt :
+                status==='rejected' ? confirmation.rejectedAt :
+                status==='pending' ? confirmation.requestedAt :
+                null;
+
+            if (timestamp) {
+                const date=new Date(timestamp);
+                if (!Number.isNaN(date.getTime())) {
+                    const prefix=
+                        status==='confirmed' ? 'Confirmed' :
+                        status==='rejected' ? 'Returned for correction' :
+                        'Requested';
+                    message=`${prefix} · ${date.toLocaleString()}`;
+                }
+            }
+            weighingConfirmationTimeEl.textContent=message;
+        }
+
+        if (requestExpertConfirmationBtn) {
+            if (!testColor) {
+                requestExpertConfirmationBtn.disabled=true;
+                requestExpertConfirmationBtn.textContent='Request Expert Confirmation';
+            } else if (status==='confirmed') {
+                requestExpertConfirmationBtn.disabled=true;
+                requestExpertConfirmationBtn.textContent='Expert Confirmed';
+            } else if (status==='pending') {
+                requestExpertConfirmationBtn.disabled=false;
+                requestExpertConfirmationBtn.textContent='Open Expert Check';
+            } else {
+                requestExpertConfirmationBtn.disabled=!valid;
+                requestExpertConfirmationBtn.textContent=
+                    status==='rejected' ? 'Request Expert Confirmation Again' : 'Request Expert Confirmation';
+            }
+        }
+    }
+
+    function renderWeighing(testColor,weighing) {
+        if (!weighingPaintsEl) return;
+
+        weighingPaintsEl.innerHTML='';
+
+        if (!testColor) {
+            if (weighingTargetEl) weighingTargetEl.hidden=true;
+            updateWeighingStatus(null,null);
+            return;
+        }
+
+        const normalized=normalizeWeighingState(testColor,weighing);
+        currentDraft.fields.weighing=normalized;
+
+        if (weighingTargetEl) weighingTargetEl.hidden=false;
+        const rgb=Array.isArray(testColor.rgb) ? testColor.rgb : [0,0,0];
+        if (weighingTargetSwatchEl) {
+            weighingTargetSwatchEl.style.background=`rgb(${rgb[0]}, ${rgb[1]}, ${rgb[2]})`;
+        }
+        if (weighingTargetLabelEl) weighingTargetLabelEl.textContent=testColor.label || 'Selected test color';
+        if (weighingTargetTotalEl) {
+            weighingTargetTotalEl.textContent=`Expected total: ${Number(testColor.totalPaintGrams || 0).toFixed(0)} g`;
+        }
+
+        const confirmationStatus=normalized.confirmation?.status || 'not_requested';
+        const locked=confirmationStatus==='pending' || confirmationStatus==='confirmed';
+
+        usedPaintsFromTestColor(testColor).forEach(paint=>{
+            const item=document.createElement('div');
+            item.className=`submission-weighing-paint ${PAINT_META[paint.key].cssClass}`;
+
+            const colorMark=document.createElement('div');
+            colorMark.className='submission-weighing-paint-mark';
+
+            const info=document.createElement('div');
+            info.className='submission-weighing-paint-info';
+            const name=document.createElement('strong');
+            name.textContent=paint.label;
+            const recipe=document.createElement('span');
+            recipe.textContent=`${paint.percent.toFixed(1)}% · expected ${paint.grams.toFixed(2)} g`;
+            info.append(name,recipe);
+
+            const field=document.createElement('label');
+            field.className='submission-weighing-code-field';
+            const fieldLabel=document.createElement('span');
+            fieldLabel.textContent='Can code';
+            const input=document.createElement('input');
+            input.type='text';
+            input.inputMode='text';
+            input.autocomplete='off';
+            input.spellcheck=false;
+            input.maxLength=6;
+            input.placeholder='A1234B';
+            input.dataset.paintKey=paint.key;
+            input.value=normalizePaintCode(normalized.paints?.[paint.key]?.code || '');
+            input.disabled=locked;
+            input.setAttribute('aria-label',`${paint.label} paint can code`);
+
+            const validation=document.createElement('small');
+            validation.className='submission-weighing-code-validation';
+
+            const refreshValidation=()=>{
+                const value=normalizePaintCode(input.value);
+                input.value=value;
+                const valid=PAINT_CODE_PATTERN.test(value);
+
+                input.classList.toggle('is-valid',valid);
+                input.classList.toggle('is-invalid',Boolean(value) && !valid);
+                validation.textContent=
+                    !value ? 'Required · format A1234B' :
+                    valid ? 'Valid code' :
+                    'Use 1 letter + 4 digits + 1 letter';
+
+                normalized.paints[paint.key].code=value;
+
+                if (
+                    normalized.confirmation.status==='rejected' ||
+                    normalized.confirmation.status==='not_requested'
+                ) {
+                    normalized.confirmation={
+                        status:'not_requested',
+                        requestedAt:null,
+                        confirmedAt:null,
+                        rejectedAt:null
+                    };
+                }
+
+                saveWeighingState(normalized);
+                updateWeighingStatus(testColor,normalized);
+            };
+
+            input.addEventListener('input',refreshValidation);
+            input.addEventListener('blur',refreshValidation);
+
+            const initialValid=PAINT_CODE_PATTERN.test(input.value);
+            input.classList.toggle('is-valid',initialValid);
+            input.classList.toggle('is-invalid',Boolean(input.value) && !initialValid);
+            validation.textContent=
+                !input.value ? 'Required · format A1234B' :
+                initialValid ? 'Valid code' :
+                'Use 1 letter + 4 digits + 1 letter';
+
+            field.append(fieldLabel,input,validation);
+            item.append(colorMark,info,field);
+            weighingPaintsEl.appendChild(item);
+        });
+
+        updateWeighingStatus(testColor,normalized);
+    }
+
+    function populateExpertWeighingSummary(testColor,weighing) {
+        if (!expertWeighingSummaryEl) return;
+        expertWeighingSummaryEl.innerHTML='';
+
+        const header=document.createElement('div');
+        header.className='expert-weighing-target-row';
+
+        const swatch=document.createElement('div');
+        swatch.className='expert-weighing-target-swatch';
+        const rgb=Array.isArray(testColor.rgb) ? testColor.rgb : [0,0,0];
+        swatch.style.background=`rgb(${rgb[0]}, ${rgb[1]}, ${rgb[2]})`;
+
+        const targetInfo=document.createElement('div');
+        const targetTitle=document.createElement('strong');
+        targetTitle.textContent=testColor.label || 'Test color';
+        const targetTotal=document.createElement('span');
+        targetTotal.textContent=`Expected total: ${Number(testColor.totalPaintGrams || 0).toFixed(0)} g`;
+        targetInfo.append(targetTitle,targetTotal);
+        header.append(swatch,targetInfo);
+        expertWeighingSummaryEl.appendChild(header);
+
+        const list=document.createElement('div');
+        list.className='expert-weighing-paint-list';
+
+        usedPaintsFromTestColor(testColor).forEach(paint=>{
+            const row=document.createElement('div');
+            row.className=`expert-weighing-paint-row ${paint.key}`;
+
+            const name=document.createElement('strong');
+            name.textContent=paint.label;
+
+            const code=document.createElement('span');
+            code.className='expert-weighing-code';
+            code.textContent=normalizePaintCode(weighing.paints?.[paint.key]?.code || '');
+
+            const weight=document.createElement('span');
+            weight.className='expert-weighing-weight';
+            weight.textContent=`${paint.grams.toFixed(2)} g`;
+
+            row.append(name,code,weight);
+            list.appendChild(row);
+        });
+
+        expertWeighingSummaryEl.appendChild(list);
+    }
+
+    function openExpertWeighingModal() {
+        const testColor=currentDraft?.fields?.testColor;
+        const weighing=currentDraft?.fields?.weighing;
+        if (!testColor || !weighing || !allWeighingCodesValid(weighing,testColor)) return;
+
+        expertWeighingPreviousFocus=document.activeElement;
+        populateExpertWeighingSummary(testColor,weighing);
+        expertWeighingOverlay.hidden=false;
+        document.body.style.overflow='hidden';
+        expertWeighingConfirmBtn.focus();
+    }
+
+    function closeExpertWeighingModal() {
+        if (!expertWeighingOverlay || expertWeighingOverlay.hidden) return;
+        expertWeighingOverlay.hidden=true;
+
+        document.body.style.overflow=overlay && !overlay.hidden ? 'hidden' : '';
+
+        if (expertWeighingPreviousFocus && typeof expertWeighingPreviousFocus.focus==='function') {
+            expertWeighingPreviousFocus.focus();
+        }
+        expertWeighingPreviousFocus=null;
+    }
+
+    function requestExpertWeighingConfirmation() {
+        const testColor=currentDraft?.fields?.testColor;
+        if (!testColor) return;
+
+        let weighing=normalizeWeighingState(testColor,currentDraft.fields.weighing);
+        if (!allWeighingCodesValid(weighing,testColor)) {
+            updateWeighingStatus(testColor,weighing);
+            return;
+        }
+
+        if (weighing.confirmation.status!=='pending') {
+            weighing.confirmation={
+                status:'pending',
+                requestedAt:nowIso(),
+                confirmedAt:null,
+                rejectedAt:null
+            };
+            saveWeighingState(weighing);
+            renderWeighing(testColor,weighing);
+        }
+
+        openExpertWeighingModal();
+    }
+
+    function decideExpertWeighingConfirmation(decision) {
+        const testColor=currentDraft?.fields?.testColor;
+        let weighing=currentDraft?.fields?.weighing;
+        if (!testColor || !weighing) return;
+
+        if (decision==='confirmed') {
+            weighing.confirmation={
+                status:'confirmed',
+                requestedAt:weighing.confirmation?.requestedAt || nowIso(),
+                confirmedAt:nowIso(),
+                rejectedAt:null
+            };
+        } else {
+            weighing.confirmation={
+                status:'rejected',
+                requestedAt:weighing.confirmation?.requestedAt || nowIso(),
+                confirmedAt:null,
+                rejectedAt:nowIso()
+            };
+        }
+
+        saveWeighingState(weighing);
+        closeExpertWeighingModal();
+        renderWeighing(testColor,weighing);
     }
 
     function renderDraft(draft, created) {
@@ -836,6 +1285,11 @@
             ? draft.fields.testColor
             : null;
         renderCapturedTestColor(testColor);
+
+        const weighing = draft.fields && draft.fields.weighing
+            ? draft.fields.weighing
+            : null;
+        renderWeighing(testColor,weighing);
 
         tokenStatus.textContent = created
             ? 'New local submission draft created.'
@@ -991,6 +1445,32 @@
         captureTestColorBtn.addEventListener('click', captureSelectedTestColor);
     }
 
+    if (requestExpertConfirmationBtn) {
+        requestExpertConfirmationBtn.addEventListener('click',requestExpertWeighingConfirmation);
+    }
+
+    if (expertWeighingCloseBtn) {
+        expertWeighingCloseBtn.addEventListener('click',closeExpertWeighingModal);
+    }
+
+    if (expertWeighingOverlay) {
+        expertWeighingOverlay.addEventListener('click',event=>{
+            if (event.target===expertWeighingOverlay) closeExpertWeighingModal();
+        });
+    }
+
+    if (expertWeighingConfirmBtn) {
+        expertWeighingConfirmBtn.addEventListener('click',()=>{
+            decideExpertWeighingConfirmation('confirmed');
+        });
+    }
+
+    if (expertWeighingRejectBtn) {
+        expertWeighingRejectBtn.addEventListener('click',()=>{
+            decideExpertWeighingConfirmation('rejected');
+        });
+    }
+
     window.addEventListener('skillosaic:test-color-selected',event=>{
         if (!testColorCaptureStatusEl || !event.detail) return;
         testColorCaptureStatusEl.textContent=
@@ -1007,7 +1487,15 @@
     });
 
     document.addEventListener('keydown', event => {
-        if (event.key === 'Escape' && !overlay.hidden) {
+        if (event.key !== 'Escape') return;
+
+        if (expertWeighingOverlay && !expertWeighingOverlay.hidden) {
+            event.preventDefault();
+            closeExpertWeighingModal();
+            return;
+        }
+
+        if (!overlay.hidden) {
             closeSubmissionModal();
         }
     });
