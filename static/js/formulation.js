@@ -4,17 +4,20 @@
     const tabMosaic = document.getElementById('tab-mosaic');
     const tabFormulation = document.getElementById('tab-formulation');
     const tabAi = document.getElementById('tab-ai');
+    const tabWk = document.getElementById('tab-wk');
     const mosaicApp = document.getElementById('mosaic-app');
     const paintApp = document.getElementById('paint-app');
     const aiApp = document.getElementById('ai-app');
+    const wkApp = document.getElementById('wk-app');
     const submissionFab = document.getElementById('submission-fab');
 
     function setTab(name) {
-        const activeName = ['mosaic','paint','ai'].includes(name) ? name : 'mosaic';
+        const activeName = ['mosaic','paint','ai','wk'].includes(name) ? name : 'mosaic';
         const entries = [
             {name:'mosaic',tab:tabMosaic,panel:mosaicApp},
             {name:'paint',tab:tabFormulation,panel:paintApp},
-            {name:'ai',tab:tabAi,panel:aiApp}
+            {name:'ai',tab:tabAi,panel:aiApp},
+            {name:'wk',tab:tabWk,panel:wkApp}
         ];
 
         entries.forEach(entry => {
@@ -27,7 +30,7 @@
         });
 
         if (submissionFab) {
-            submissionFab.hidden = activeName === 'ai';
+            submissionFab.hidden = activeName === 'ai' || activeName === 'wk';
         }
 
         if (activeName === 'paint') {
@@ -38,6 +41,7 @@
     tabMosaic.addEventListener('click', () => setTab('mosaic'));
     tabFormulation.addEventListener('click', () => setTab('paint'));
     if (tabAi) tabAi.addEventListener('click', () => setTab('ai'));
+    if (tabWk) tabWk.addEventListener('click', () => setTab('wk'));
 
     const video = document.getElementById('paint-video');
     const sourceCanvas = document.getElementById('paint-source-canvas');
@@ -63,6 +67,19 @@
     const manualResult = document.getElementById('manual-result');
     const manualLabSwatch = document.getElementById('manual-lab-swatch');
     const manualTargetLab = document.getElementById('manual-target-lab');
+
+    const wkTargetL = document.getElementById('wk-target-L');
+    const wkTargetA = document.getElementById('wk-target-a');
+    const wkTargetB = document.getElementById('wk-target-b');
+    const wkTotalGrams = document.getElementById('wk-total-grams');
+    const wkMethod = document.getElementById('wk-method');
+    const wkMaxPercent = document.getElementById('wk-max-percent');
+    const wkWhiteL = document.getElementById('wk-white-L');
+    const wkBlackL = document.getElementById('wk-black-L');
+    const wkRunBtn = document.getElementById('wk-run');
+    const wkUseTestColorBtn = document.getElementById('wk-use-test-color');
+    const wkStatus = document.getElementById('wk-status');
+    const wkResults = document.getElementById('wk-results');
 
     const manualLabModalOverlay = document.getElementById('manual-lab-modal-overlay');
     const manualLabModalClose = document.getElementById('manual-lab-modal-close');
@@ -376,6 +393,325 @@
         }
         best.source='Forward RBF + CIEDE2000 search';
         return best;
+    }
+
+    function labLToRelativeY(L) {
+        const value=Math.max(0,Math.min(100,Number(L)));
+        return value>8
+            ? Math.pow((value+16)/116,3)
+            : value/903.3;
+    }
+
+    function relativeYToLabL(Y) {
+        const value=Math.max(0,Math.min(1,Number(Y)));
+        const epsilon=Math.pow(6/29,3);
+        return value>epsilon
+            ? 116*Math.cbrt(value)-16
+            : 903.3*value;
+    }
+
+    function scalarKsFromReflectance(R) {
+        const reflectance=Math.max(1e-6,Math.min(0.999999,Number(R)));
+        return Math.pow(1-reflectance,2)/(2*reflectance);
+    }
+
+    function reflectanceFromScalarKs(ks) {
+        const value=Math.max(0,Number(ks));
+        return Math.max(1e-6,Math.min(0.999999,1+value-Math.sqrt(value*value+2*value)));
+    }
+
+    function virtualModifierLab(baseLab,modifierFraction,modifierL,method) {
+        const p=Math.max(0,Math.min(1,Number(modifierFraction)));
+        const baseY=labLToRelativeY(baseLab[0]);
+        const modifierY=labLToRelativeY(modifierL);
+        let mixedY;
+
+        if (method==='km') {
+            const baseKs=scalarKsFromReflectance(baseY);
+            const modifierKs=scalarKsFromReflectance(modifierY);
+            const mixedKs=(1-p)*baseKs+p*modifierKs;
+            mixedY=reflectanceFromScalarKs(mixedKs);
+        } else {
+            mixedY=(1-p)*baseY+p*modifierY;
+        }
+
+        return [relativeYToLabL(mixedY),baseLab[1],baseLab[2]];
+    }
+
+    function buildVirtualRecipe(baseRecipe,modifierType,modifierPercent) {
+        const modifier=Math.max(0,Math.min(100,Number(modifierPercent)));
+        const scale=(100-modifier)/100;
+        return {
+            red:baseRecipe[0]*scale,
+            yellow:baseRecipe[1]*scale,
+            blue:baseRecipe[2]*scale,
+            white:modifierType==='white' ? modifier : 0,
+            black:modifierType==='black' ? modifier : 0
+        };
+    }
+
+    function findVirtualWhiteBlackMix(target,method,options={}) {
+        const maxPercent=Math.max(0,Math.min(95,Number(options.maxPercent ?? 60)));
+        const stepPercent=5;
+        const whiteL=Math.max(0,Math.min(100,Number(options.whiteL ?? 97.55)));
+        const blackL=Math.max(0,Math.min(100,Number(options.blackL ?? 22.69)));
+        const baseline=findPaintMix(target);
+
+        let best={
+            modifierType:'none',
+            modifierPercent:0,
+            baseRecipe:baseline.recipe.slice(),
+            recipe:{
+                red:baseline.recipe[0],
+                yellow:baseline.recipe[1],
+                blue:baseline.recipe[2],
+                white:0,
+                black:0
+            },
+            predictedLab:baseline.predictedLab.slice(),
+            deltaE:baseline.deltaE,
+            source:baseline.source
+        };
+
+        for (const candidate of paintGrid) {
+            for (const modifierType of ['white','black']) {
+                const modifierL=modifierType==='white' ? whiteL : blackL;
+
+                for (let pct=stepPercent;pct<=maxPercent+1e-9;pct+=stepPercent) {
+                    const adjustedLab=virtualModifierLab(
+                        candidate.lab,
+                        pct/100,
+                        modifierL,
+                        method
+                    );
+                    const de=deltaE00(target,adjustedLab);
+
+                    if (de<best.deltaE) {
+                        best={
+                            modifierType,
+                            modifierPercent:pct,
+                            baseRecipe:candidate.recipe.slice(),
+                            recipe:buildVirtualRecipe(candidate.recipe,modifierType,pct),
+                            predictedLab:adjustedLab,
+                            deltaE:de,
+                            source:method==='km'
+                                ? 'Virtual White/Black · simplified Kubelka–Munk'
+                                : 'Virtual White/Black · luminance Y interpolation'
+                        };
+                    }
+                }
+            }
+        }
+
+        return {baseline,best,method,maxPercent,stepPercent,whiteL,blackL};
+    }
+
+    function wkFormatLab(lab) {
+        return Array.isArray(lab)
+            ? `L* ${Number(lab[0]).toFixed(2)} · a* ${Number(lab[1]).toFixed(2)} · b* ${Number(lab[2]).toFixed(2)}`
+            : '—';
+    }
+
+    function wkFormatRecipe(recipe,totalGrams) {
+        const keys=[
+            ['red','Red'],
+            ['yellow','Yellow'],
+            ['blue','Blue'],
+            ['white','White'],
+            ['black','Black']
+        ];
+        return keys.map(([key,label])=>{
+            const pct=Number(recipe[key] || 0);
+            const grams=totalGrams*pct/100;
+            return `
+                <div class="wk-paint-part ${key}">
+                    <span>${label}</span>
+                    <strong>${pct.toFixed(2)}%</strong>
+                    <b>${grams.toFixed(2)} g</b>
+                </div>
+            `;
+        }).join('');
+    }
+
+    function wkResultCard(title,result,target,totalGrams) {
+        const best=result.best;
+        const improvement=Number(result.baseline.deltaE)-Number(best.deltaE);
+        const modifierText=best.modifierType==='none'
+            ? 'No virtual White / Black selected'
+            : `${best.modifierPercent.toFixed(0)}% virtual ${best.modifierType==='white' ? 'White' : 'Black'}`;
+        const methodLabel=result.method==='km'
+            ? 'Simplified Kubelka–Munk'
+            : 'Luminance Y interpolation';
+
+        return `
+            <article class="wk-result-card">
+                <div class="wk-result-card-header">
+                    <div>
+                        <span class="panel-label">${title}</span>
+                        <h3>${methodLabel}</h3>
+                    </div>
+                    <div class="wk-delta-badge">
+                        <small>Predicted ΔE00</small>
+                        <strong>${Number(best.deltaE).toFixed(2)}</strong>
+                    </div>
+                </div>
+
+                <div class="wk-result-metrics">
+                    <div><span>Target LAB</span><strong>${wkFormatLab(target)}</strong></div>
+                    <div><span>Predicted LAB</span><strong>${wkFormatLab(best.predictedLab)}</strong></div>
+                    <div><span>Baseline ΔE00</span><strong>${Number(result.baseline.deltaE).toFixed(2)}</strong></div>
+                    <div><span>ΔE00 improvement</span><strong>${improvement.toFixed(2)}</strong></div>
+                    <div><span>Virtual modifier</span><strong>${modifierText}</strong></div>
+                    <div><span>Base R/Y/B before modifier</span><strong>${best.baseRecipe.map(v=>Number(v).toFixed(1)).join(' / ')}</strong></div>
+                </div>
+
+                <div class="wk-recipe-title">
+                    <span>Virtual recipe</span>
+                    <strong>${Number(totalGrams).toFixed(0)} g total</strong>
+                </div>
+                <div class="wk-recipe-grid">
+                    ${wkFormatRecipe(best.recipe,totalGrams)}
+                </div>
+
+                <div class="wk-result-source">${best.source}</div>
+            </article>
+        `;
+    }
+
+    function wkBaselineCard(baseline,totalGrams) {
+        const recipe={
+            red:baseline.recipe[0],
+            yellow:baseline.recipe[1],
+            blue:baseline.recipe[2],
+            white:0,
+            black:0
+        };
+
+        return `
+            <article class="wk-result-card wk-baseline-card">
+                <div class="wk-result-card-header">
+                    <div>
+                        <span class="panel-label">Current model</span>
+                        <h3>R / Y / B baseline</h3>
+                    </div>
+                    <div class="wk-delta-badge">
+                        <small>Predicted ΔE00</small>
+                        <strong>${Number(baseline.deltaE).toFixed(2)}</strong>
+                    </div>
+                </div>
+
+                <div class="wk-result-metrics">
+                    <div><span>Predicted LAB</span><strong>${wkFormatLab(baseline.predictedLab)}</strong></div>
+                    <div><span>Source</span><strong>${baseline.source}</strong></div>
+                </div>
+
+                <div class="wk-recipe-title">
+                    <span>Current R/Y/B recipe</span>
+                    <strong>${Number(totalGrams).toFixed(0)} g total</strong>
+                </div>
+                <div class="wk-recipe-grid">
+                    ${wkFormatRecipe(recipe,totalGrams)}
+                </div>
+            </article>
+        `;
+    }
+
+    function readWkTarget() {
+        const L=Number(wkTargetL?.value);
+        const a=Number(wkTargetA?.value);
+        const b=Number(wkTargetB?.value);
+
+        if (![L,a,b].every(Number.isFinite) || L<0 || L>100) {
+            return null;
+        }
+        return [L,a,b];
+    }
+
+    function runWhiteBlackExperiment() {
+        if (!wkResults || !wkStatus) return;
+
+        const target=readWkTarget();
+        const totalGrams=Number(wkTotalGrams?.value);
+        const maxPercent=Number(wkMaxPercent?.value);
+        const whiteL=Number(wkWhiteL?.value);
+        const blackL=Number(wkBlackL?.value);
+        const selectedMethod=wkMethod?.value || 'both';
+
+        if (!target) {
+            wkStatus.textContent='Enter valid LAB values. L* must be between 0 and 100.';
+            wkStatus.classList.add('is-error');
+            return;
+        }
+
+        if (!(totalGrams>0) || !Number.isFinite(maxPercent) || !Number.isFinite(whiteL) || !Number.isFinite(blackL)) {
+            wkStatus.textContent='Check the simulation settings.';
+            wkStatus.classList.add('is-error');
+            return;
+        }
+
+        wkStatus.classList.remove('is-error');
+        wkStatus.textContent='Searching the current R/Y/B model with virtual White / Black...';
+        if (wkRunBtn) wkRunBtn.disabled=true;
+
+        window.setTimeout(()=>{
+            try {
+                const methods=selectedMethod==='both' ? ['luminance','km'] : [selectedMethod];
+                const results=methods.map(method=>findVirtualWhiteBlackMix(target,method,{
+                    maxPercent,
+                    whiteL,
+                    blackL
+                }));
+                const baseline=results[0].baseline;
+
+                wkResults.innerHTML=
+                    wkBaselineCard(baseline,totalGrams)+
+                    results.map((result,index)=>wkResultCard(
+                        methods.length>1 ? `Virtual model ${index+1}` : 'Virtual model',
+                        result,
+                        target,
+                        totalGrams
+                    )).join('');
+
+                const best=results.reduce((current,result)=>
+                    !current || result.best.deltaE<current.best.deltaE ? result : current
+                ,null);
+
+                wkStatus.textContent=
+                    `Simulation complete. Best virtual ΔE00: ${best.best.deltaE.toFixed(2)} (${best.method==='km' ? 'simplified Kubelka–Munk' : 'luminance Y'}).`;
+            } catch (error) {
+                console.error('[Skillosaic] White / Black experiment failed:',error);
+                wkStatus.textContent=`Simulation failed: ${error.message || error}`;
+                wkStatus.classList.add('is-error');
+            } finally {
+                if (wkRunBtn) wkRunBtn.disabled=false;
+            }
+        },0);
+    }
+
+    function useSelectedTestColorInExperiment() {
+        const selected=getSelectedTestColorSnapshot();
+        const lab=selected?.targetLab || selected?.nixEquivalentLab;
+
+        if (!Array.isArray(lab) || lab.length<3) {
+            if (wkStatus) {
+                wkStatus.textContent='Select a test color in Paint Formulation first.';
+                wkStatus.classList.add('is-error');
+            }
+            return;
+        }
+
+        wkTargetL.value=Number(lab[0]).toFixed(2);
+        wkTargetA.value=Number(lab[1]).toFixed(2);
+        wkTargetB.value=Number(lab[2]).toFixed(2);
+
+        if (wkTotalGrams && totalGramsInput && Number(totalGramsInput.value)>0) {
+            wkTotalGrams.value=totalGramsInput.value;
+        }
+
+        if (wkStatus) {
+            wkStatus.classList.remove('is-error');
+            wkStatus.textContent=`${selected.label || 'Selected test color'} loaded from Paint Formulation.`;
+        }
     }
 
     function kmeansPlusPlus(points,k) {
@@ -1724,6 +2060,14 @@
         if (statusEl) {
             statusEl.textContent='Camera released for submission photo';
         }
+    }
+
+    if (wkRunBtn) {
+        wkRunBtn.addEventListener('click',runWhiteBlackExperiment);
+    }
+
+    if (wkUseTestColorBtn) {
+        wkUseTestColorBtn.addEventListener('click',useSelectedTestColorInExperiment);
     }
 
     window.SkillosaicPaint=Object.freeze({
