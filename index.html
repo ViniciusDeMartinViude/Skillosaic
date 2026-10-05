@@ -27,6 +27,9 @@
         <button class="app-tab" id="tab-ai" role="tab" aria-selected="false" aria-controls="ai-app">
             How AI Works
         </button>
+        <button class="app-tab" id="tab-wk" role="tab" aria-selected="false" aria-controls="wk-app">
+            White / Black Experiment
+        </button>
     </div>
 
     <main id="mosaic-app" class="app-tab-panel active">
@@ -318,6 +321,16 @@
                     but to translate what the camera sees into a LAB target that can be reproduced
                     with Red, Yellow and Blue paint.
                 </p>
+                <div class="ai-hero-actions">
+                    <a
+                        class="btn-action ai-guide-download"
+                        href="static/docs/Skillosaic_AI_Detailed_Guide.pdf"
+                        download
+                    >
+                        Download detailed PDF guide
+                    </a>
+                    <span>Detailed technical explanation of the complete AI pipeline.</span>
+                </div>
             </div>
             <div class="ai-local-badge">
                 <strong>Runs locally</strong>
@@ -541,6 +554,150 @@
                     <span role="cell">Choose the predicted mixture closest to the target color.</span>
                 </div>
             </div>
+        </section>
+    </main>
+
+    <main id="wk-app" class="app-tab-panel wk-experiment-app" hidden>
+        <section class="wk-hero">
+            <div>
+                <p class="paint-kicker">Experimental paint model</p>
+                <h1>Virtual White / Black Lightness Experiment</h1>
+                <p>
+                    Test whether adding White or Black can improve lightness matching before collecting
+                    new physical training mixtures. This experiment keeps the current R/Y/B forward model
+                    and simulates only the effect on L*.
+                </p>
+            </div>
+            <div class="wk-experimental-badge">
+                <strong>Experimental</strong>
+                <span>No White / Black mixture measurements are used for training.</span>
+            </div>
+        </section>
+
+        <section class="wk-warning">
+            <strong>Important assumption:</strong>
+            White and Black modify only L* in this simulator. The predicted a* and b* remain those of
+            the underlying R/Y/B model. The purpose is to test the hypothesis that an independent
+            lightness control can reduce ΔE00 and reduce the model's tendency to use Yellow to lighten colors.
+        </section>
+
+        <section class="wk-controls-card">
+            <div class="wk-controls-heading">
+                <div>
+                    <span class="panel-label">Target &amp; simulation settings</span>
+                    <h2>Enter a target LAB and compare virtual models</h2>
+                </div>
+                <button class="btn-action wk-copy-test-btn" id="wk-use-test-color" type="button">
+                    Use selected test color
+                </button>
+            </div>
+
+            <div class="wk-controls-grid">
+                <label>
+                    <span>L*</span>
+                    <input id="wk-target-L" type="number" min="0" max="100" step="0.01" />
+                </label>
+                <label>
+                    <span>a*</span>
+                    <input id="wk-target-a" type="number" step="0.01" />
+                </label>
+                <label>
+                    <span>b*</span>
+                    <input id="wk-target-b" type="number" step="0.01" />
+                </label>
+                <label>
+                    <span>Total paint</span>
+                    <div class="wk-unit-input">
+                        <input id="wk-total-grams" type="number" min="5" step="5" value="100" />
+                        <b>g</b>
+                    </div>
+                </label>
+                <label>
+                    <span>Method</span>
+                    <select id="wk-method">
+                        <option value="both" selected>Compare both</option>
+                        <option value="luminance">Luminance Y interpolation</option>
+                        <option value="km">Simplified Kubelka–Munk</option>
+                    </select>
+                </label>
+                <label>
+                    <span>Maximum White / Black</span>
+                    <select id="wk-max-percent">
+                        <option value="40">40%</option>
+                        <option value="60" selected>60%</option>
+                        <option value="80">80%</option>
+                    </select>
+                </label>
+                <label>
+                    <span>White reference L*</span>
+                    <input id="wk-white-L" type="number" min="0" max="100" step="0.01" value="97.55" />
+                </label>
+                <label>
+                    <span>Black reference L*</span>
+                    <input id="wk-black-L" type="number" min="0" max="100" step="0.01" value="22.69" />
+                </label>
+            </div>
+
+            <div class="wk-run-row">
+                <button class="btn-action wk-run-btn" id="wk-run" type="button">Run virtual simulation</button>
+                <span id="wk-status" class="wk-status" aria-live="polite">
+                    White / Black is searched in 5% steps using the current R/Y/B model.
+                </span>
+            </div>
+        </section>
+
+        <section class="wk-method-note">
+            <article>
+                <span class="panel-label">Method A</span>
+                <h3>Luminance Y interpolation</h3>
+                <p>
+                    Converts L* to relative luminance Y, interpolates between the R/Y/B prediction
+                    and the White or Black reference, then converts Y back to L*.
+                </p>
+                <code>Ymix = (1 − p) · Ybase + p · Ymodifier</code>
+            </article>
+            <article>
+                <span class="panel-label">Method B</span>
+                <h3>Simplified Kubelka–Munk</h3>
+                <p>
+                    Treats relative luminance as a scalar reflectance approximation, converts it to K/S,
+                    mixes K/S values, then converts the result back to reflectance and L*.
+                </p>
+                <code>K/S = (1 − R)² / (2R)</code>
+            </article>
+        </section>
+
+        <section class="wk-results-section">
+            <div class="wk-results-heading">
+                <div>
+                    <span class="panel-label">Simulation result</span>
+                    <h2>Current R/Y/B baseline vs virtual White / Black</h2>
+                </div>
+                <span class="wk-step-note">Search resolution: 5 percentage points</span>
+            </div>
+
+            <div id="wk-results" class="wk-results-grid">
+                <div class="wk-empty-state">
+                    Enter a target LAB and run the simulation.
+                </div>
+            </div>
+        </section>
+
+        <section class="wk-test-guidance">
+            <div>
+                <span class="panel-label">For the paint specialist</span>
+                <h2>How to use this experiment</h2>
+            </div>
+            <ol>
+                <li>Choose a target color where the current R/Y/B model has difficulty, especially gray or low-chroma targets.</li>
+                <li>Compare the current R/Y/B result with the two virtual White / Black methods.</li>
+                <li>Physically mix one or more proposed recipes and measure the result with Nix.</li>
+                <li>Record the measured LAB and tell us which method behaved more realistically.</li>
+            </ol>
+            <p>
+                The virtual result is intentionally a hypothesis, not a trained White / Black model.
+                Physical measurements from these trials can later be used to build a proper five-pigment model.
+            </p>
         </section>
     </main>
 
