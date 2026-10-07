@@ -4,20 +4,17 @@
     const tabMosaic = document.getElementById('tab-mosaic');
     const tabFormulation = document.getElementById('tab-formulation');
     const tabAi = document.getElementById('tab-ai');
-    const tabWk = document.getElementById('tab-wk');
     const mosaicApp = document.getElementById('mosaic-app');
     const paintApp = document.getElementById('paint-app');
     const aiApp = document.getElementById('ai-app');
-    const wkApp = document.getElementById('wk-app');
     const submissionFab = document.getElementById('submission-fab');
 
     function setTab(name) {
-        const activeName = ['mosaic','paint','ai','wk'].includes(name) ? name : 'mosaic';
+        const activeName = ['mosaic','paint','ai'].includes(name) ? name : 'mosaic';
         const entries = [
             {name:'mosaic',tab:tabMosaic,panel:mosaicApp},
             {name:'paint',tab:tabFormulation,panel:paintApp},
-            {name:'ai',tab:tabAi,panel:aiApp},
-            {name:'wk',tab:tabWk,panel:wkApp}
+            {name:'ai',tab:tabAi,panel:aiApp}
         ];
 
         entries.forEach(entry => {
@@ -30,7 +27,7 @@
         });
 
         if (submissionFab) {
-            submissionFab.hidden = activeName === 'ai' || activeName === 'wk';
+            submissionFab.hidden = activeName === 'ai';
         }
 
         if (activeName === 'paint') {
@@ -41,7 +38,6 @@
     tabMosaic.addEventListener('click', () => setTab('mosaic'));
     tabFormulation.addEventListener('click', () => setTab('paint'));
     if (tabAi) tabAi.addEventListener('click', () => setTab('ai'));
-    if (tabWk) tabWk.addEventListener('click', () => setTab('wk'));
 
     const video = document.getElementById('paint-video');
     const sourceCanvas = document.getElementById('paint-source-canvas');
@@ -68,18 +64,11 @@
     const manualLabSwatch = document.getElementById('manual-lab-swatch');
     const manualTargetLab = document.getElementById('manual-target-lab');
 
-    const wkTargetL = document.getElementById('wk-target-L');
-    const wkTargetA = document.getElementById('wk-target-a');
-    const wkTargetB = document.getElementById('wk-target-b');
-    const wkTotalGrams = document.getElementById('wk-total-grams');
-    const wkMethod = document.getElementById('wk-method');
-    const wkMaxPercent = document.getElementById('wk-max-percent');
-    const wkWhiteL = document.getElementById('wk-white-L');
-    const wkBlackL = document.getElementById('wk-black-L');
-    const wkRunBtn = document.getElementById('wk-run');
-    const wkUseTestColorBtn = document.getElementById('wk-use-test-color');
-    const wkStatus = document.getElementById('wk-status');
-    const wkResults = document.getElementById('wk-results');
+    const neutralRefinementStatus = document.getElementById('neutral-refinement-status');
+    const neutralRefinementResults = document.getElementById('neutral-refinement-results');
+    const neutralMaxPercent = document.getElementById('neutral-max-percent');
+    const neutralWhiteL = document.getElementById('neutral-white-L');
+    const neutralBlackL = document.getElementById('neutral-black-L');
 
     const manualLabModalOverlay = document.getElementById('manual-lab-modal-overlay');
     const manualLabModalClose = document.getElementById('manual-lab-modal-close');
@@ -143,6 +132,9 @@
     let selectedFormulationIndex = null;
     let selectedTestColorIndex = null;
     let selectedTestColorAt = null;
+    let selectedNeutralMethod = 'baseline';
+    let neutralRefinementCache = null;
+    let neutralCalculationVersion = 0;
     let formulationModalPreviousFocus = null;
     let manualLabModalPreviousFocus = null;
 
@@ -512,206 +504,203 @@
             : '—';
     }
 
-    function wkFormatRecipe(recipe,totalGrams) {
-        const keys=[
+    function neutralMethodLabel(method) {
+        if (method==='luminance') return 'Luminance Y interpolation';
+        if (method==='km') return 'Simplified Kubelka–Munk';
+        return 'Current R/Y/B model';
+    }
+
+    function neutralResultForMethod(method) {
+        if (!neutralRefinementCache) return null;
+        if (method==='luminance') return neutralRefinementCache.luminance?.best || null;
+        if (method==='km') return neutralRefinementCache.km?.best || null;
+
+        const baseline=neutralRefinementCache.baseline;
+        if (!baseline) return null;
+        return {
+            modifierType:'none',
+            modifierPercent:0,
+            baseRecipe:baseline.recipe.slice(),
+            recipe:{
+                red:baseline.recipe[0],
+                yellow:baseline.recipe[1],
+                blue:baseline.recipe[2],
+                white:0,
+                black:0
+            },
+            predictedLab:baseline.predictedLab.slice(),
+            deltaE:baseline.deltaE,
+            source:baseline.source
+        };
+    }
+
+    function neutralRecipeRows(recipe,totalGrams) {
+        const meta=[
             ['red','Red'],
             ['yellow','Yellow'],
             ['blue','Blue'],
             ['white','White'],
             ['black','Black']
         ];
-        return keys.map(([key,label])=>{
-            const pct=Number(recipe[key] || 0);
-            const grams=totalGrams*pct/100;
+        return meta.map(([key,label])=>{
+            const percent=Number(recipe?.[key] || 0);
+            const grams=totalGrams*percent/100;
             return `
-                <div class="wk-paint-part ${key}">
+                <div class="neutral-recipe-paint ${key}">
                     <span>${label}</span>
-                    <strong>${pct.toFixed(2)}%</strong>
+                    <strong>${percent.toFixed(2)}%</strong>
                     <b>${grams.toFixed(2)} g</b>
                 </div>
             `;
         }).join('');
     }
 
-    function wkResultCard(title,result,target,totalGrams) {
-        const best=result.best;
-        const improvement=Number(result.baseline.deltaE)-Number(best.deltaE);
-        const modifierText=best.modifierType==='none'
-            ? 'No virtual White / Black selected'
-            : `${best.modifierPercent.toFixed(0)}% virtual ${best.modifierType==='white' ? 'White' : 'Black'}`;
-        const methodLabel=result.method==='km'
-            ? 'Simplified Kubelka–Munk'
-            : 'Luminance Y interpolation';
+    function neutralResultCard(method,result,totalGrams,target) {
+        const selected=selectedNeutralMethod===method;
+        const methodLabel=neutralMethodLabel(method);
+        const baselineDelta=Number(neutralRefinementCache?.baseline?.deltaE ?? result.deltaE);
+        const improvement=baselineDelta-Number(result.deltaE);
+        const modifier=result.modifierType==='none'
+            ? 'No White / Black'
+            : `${Number(result.modifierPercent).toFixed(0)}% ${result.modifierType==='white' ? 'White' : 'Black'}`;
+        const actionLabel=method==='baseline'
+            ? 'Keep current R/Y/B'
+            : `Use ${methodLabel}`;
 
         return `
-            <article class="wk-result-card">
-                <div class="wk-result-card-header">
+            <article class="neutral-method-card ${selected ? 'is-selected' : ''}" data-neutral-method="${method}">
+                <div class="neutral-method-card-header">
                     <div>
-                        <span class="panel-label">${title}</span>
+                        <span class="panel-label">${method==='baseline' ? 'Baseline' : 'White / Black model'}</span>
                         <h3>${methodLabel}</h3>
                     </div>
-                    <div class="wk-delta-badge">
+                    <div class="neutral-method-delta">
                         <small>Predicted ΔE00</small>
-                        <strong>${Number(best.deltaE).toFixed(2)}</strong>
+                        <strong>${Number(result.deltaE).toFixed(2)}</strong>
                     </div>
                 </div>
 
-                <div class="wk-result-metrics">
+                <div class="neutral-method-metrics">
                     <div><span>Target LAB</span><strong>${wkFormatLab(target)}</strong></div>
-                    <div><span>Predicted LAB</span><strong>${wkFormatLab(best.predictedLab)}</strong></div>
-                    <div><span>Baseline ΔE00</span><strong>${Number(result.baseline.deltaE).toFixed(2)}</strong></div>
+                    <div><span>Predicted LAB</span><strong>${wkFormatLab(result.predictedLab)}</strong></div>
+                    <div><span>White / Black</span><strong>${modifier}</strong></div>
                     <div><span>ΔE00 improvement</span><strong>${improvement.toFixed(2)}</strong></div>
-                    <div><span>Virtual modifier</span><strong>${modifierText}</strong></div>
-                    <div><span>Base R/Y/B before modifier</span><strong>${best.baseRecipe.map(v=>Number(v).toFixed(1)).join(' / ')}</strong></div>
                 </div>
 
-                <div class="wk-recipe-title">
-                    <span>Virtual recipe</span>
-                    <strong>${Number(totalGrams).toFixed(0)} g total</strong>
-                </div>
-                <div class="wk-recipe-grid">
-                    ${wkFormatRecipe(best.recipe,totalGrams)}
+                <div class="neutral-recipe-grid">
+                    ${neutralRecipeRows(result.recipe,totalGrams)}
                 </div>
 
-                <div class="wk-result-source">${best.source}</div>
+                <button
+                    class="btn-action neutral-use-method ${selected ? 'is-selected' : ''}"
+                    type="button"
+                    data-neutral-select="${method}"
+                    aria-pressed="${selected ? 'true' : 'false'}"
+                >
+                    ${selected ? 'Selected for Step 5' : actionLabel}
+                </button>
             </article>
         `;
     }
 
-    function wkBaselineCard(baseline,totalGrams) {
-        const recipe={
-            red:baseline.recipe[0],
-            yellow:baseline.recipe[1],
-            blue:baseline.recipe[2],
-            white:0,
-            black:0
-        };
+    function renderNeutralRefinement() {
+        if (!neutralRefinementResults || !neutralRefinementStatus) return;
 
-        return `
-            <article class="wk-result-card wk-baseline-card">
-                <div class="wk-result-card-header">
-                    <div>
-                        <span class="panel-label">Current model</span>
-                        <h3>R / Y / B baseline</h3>
-                    </div>
-                    <div class="wk-delta-badge">
-                        <small>Predicted ΔE00</small>
-                        <strong>${Number(baseline.deltaE).toFixed(2)}</strong>
-                    </div>
+        const hasSelection=
+            selectedTestColorIndex !== null &&
+            lastFormulationRows &&
+            lastFormulationRows[selectedTestColorIndex];
+
+        if (!hasSelection || !neutralRefinementCache) {
+            neutralRefinementStatus.textContent='Select a test color above.';
+            neutralRefinementStatus.classList.remove('has-selection');
+            neutralRefinementResults.innerHTML=`
+                <div class="neutral-refinement-empty">
+                    Select one formulation card as the test color to compare the three recipes.
                 </div>
-
-                <div class="wk-result-metrics">
-                    <div><span>Predicted LAB</span><strong>${wkFormatLab(baseline.predictedLab)}</strong></div>
-                    <div><span>Source</span><strong>${baseline.source}</strong></div>
-                </div>
-
-                <div class="wk-recipe-title">
-                    <span>Current R/Y/B recipe</span>
-                    <strong>${Number(totalGrams).toFixed(0)} g total</strong>
-                </div>
-                <div class="wk-recipe-grid">
-                    ${wkFormatRecipe(recipe,totalGrams)}
-                </div>
-            </article>
-        `;
-    }
-
-    function readWkTarget() {
-        const L=Number(wkTargetL?.value);
-        const a=Number(wkTargetA?.value);
-        const b=Number(wkTargetB?.value);
-
-        if (![L,a,b].every(Number.isFinite) || L<0 || L>100) {
-            return null;
-        }
-        return [L,a,b];
-    }
-
-    function runWhiteBlackExperiment() {
-        if (!wkResults || !wkStatus) return;
-
-        const target=readWkTarget();
-        const totalGrams=Number(wkTotalGrams?.value);
-        const maxPercent=Number(wkMaxPercent?.value);
-        const whiteL=Number(wkWhiteL?.value);
-        const blackL=Number(wkBlackL?.value);
-        const selectedMethod=wkMethod?.value || 'both';
-
-        if (!target) {
-            wkStatus.textContent='Enter valid LAB values. L* must be between 0 and 100.';
-            wkStatus.classList.add('is-error');
+            `;
             return;
         }
 
-        if (!(totalGrams>0) || !Number.isFinite(maxPercent) || !Number.isFinite(whiteL) || !Number.isFinite(blackL)) {
-            wkStatus.textContent='Check the simulation settings.';
-            wkStatus.classList.add('is-error');
+        const row=lastFormulationRows[selectedTestColorIndex];
+        const totalGrams=Number(totalGramsInput.value);
+        const target=row.nixLab;
+        const baseline=neutralResultForMethod('baseline');
+        const luminance=neutralResultForMethod('luminance');
+        const km=neutralResultForMethod('km');
+
+        neutralRefinementStatus.classList.add('has-selection');
+        neutralRefinementStatus.textContent=
+            `Color ${selectedTestColorIndex+1} · ${neutralMethodLabel(selectedNeutralMethod)} selected for Step 5`;
+
+        neutralRefinementResults.innerHTML=[
+            neutralResultCard('baseline',baseline,totalGrams,target),
+            neutralResultCard('luminance',luminance,totalGrams,target),
+            neutralResultCard('km',km,totalGrams,target)
+        ].join('');
+    }
+
+    function calculateNeutralRefinement() {
+        const calculationVersion=++neutralCalculationVersion;
+        const hasSelection=
+            selectedTestColorIndex !== null &&
+            lastFormulationRows &&
+            lastFormulationRows[selectedTestColorIndex];
+
+        if (!hasSelection) {
+            neutralRefinementCache=null;
+            renderNeutralRefinement();
             return;
         }
 
-        wkStatus.classList.remove('is-error');
-        wkStatus.textContent='Searching the current R/Y/B model with virtual White / Black...';
-        if (wkRunBtn) wkRunBtn.disabled=true;
+        const row=lastFormulationRows[selectedTestColorIndex];
+        const target=row.nixLab.map(Number);
+        const maxPercent=Number(neutralMaxPercent?.value || 60);
+        const whiteL=Number(neutralWhiteL?.value || 97.55);
+        const blackL=Number(neutralBlackL?.value || 22.69);
+
+        if (neutralRefinementStatus) {
+            neutralRefinementStatus.textContent='Calculating White / Black refinements...';
+            neutralRefinementStatus.classList.add('has-selection');
+        }
 
         window.setTimeout(()=>{
-            try {
-                const methods=selectedMethod==='both' ? ['luminance','km'] : [selectedMethod];
-                const results=methods.map(method=>findVirtualWhiteBlackMix(target,method,{
-                    maxPercent,
-                    whiteL,
-                    blackL
-                }));
-                const baseline=results[0].baseline;
+            if (calculationVersion!==neutralCalculationVersion) return;
 
-                wkResults.innerHTML=
-                    wkBaselineCard(baseline,totalGrams)+
-                    results.map((result,index)=>wkResultCard(
-                        methods.length>1 ? `Virtual model ${index+1}` : 'Virtual model',
-                        result,
-                        target,
-                        totalGrams
-                    )).join('');
+            const luminance=findVirtualWhiteBlackMix(target,'luminance',{
+                maxPercent,whiteL,blackL
+            });
+            const km=findVirtualWhiteBlackMix(target,'km',{
+                maxPercent,whiteL,blackL
+            });
 
-                const best=results.reduce((current,result)=>
-                    !current || result.best.deltaE<current.best.deltaE ? result : current
-                ,null);
+            if (calculationVersion!==neutralCalculationVersion) return;
 
-                wkStatus.textContent=
-                    `Simulation complete. Best virtual ΔE00: ${best.best.deltaE.toFixed(2)} (${best.method==='km' ? 'simplified Kubelka–Munk' : 'luminance Y'}).`;
-            } catch (error) {
-                console.error('[Skillosaic] White / Black experiment failed:',error);
-                wkStatus.textContent=`Simulation failed: ${error.message || error}`;
-                wkStatus.classList.add('is-error');
-            } finally {
-                if (wkRunBtn) wkRunBtn.disabled=false;
-            }
+            neutralRefinementCache={
+                target,
+                baseline:row.formulation,
+                luminance,
+                km,
+                settings:{maxPercent,whiteL,blackL,stepPercent:5}
+            };
+            renderNeutralRefinement();
         },0);
     }
 
-    function useSelectedTestColorInExperiment() {
-        const selected=getSelectedTestColorSnapshot();
-        const lab=selected?.targetLab || selected?.nixEquivalentLab;
+    function selectNeutralMethod(method) {
+        if (!['baseline','luminance','km'].includes(method) || !neutralRefinementCache) return;
+        selectedNeutralMethod=method;
+        selectedTestColorAt=new Date().toISOString();
+        renderNeutralRefinement();
+        renderTestColorSelectionState();
 
-        if (!Array.isArray(lab) || lab.length<3) {
-            if (wkStatus) {
-                wkStatus.textContent='Select a test color in Paint Formulation first.';
-                wkStatus.classList.add('is-error');
+        window.dispatchEvent(new CustomEvent('skillosaic:test-color-selected',{
+            detail:{
+                index:selectedTestColorIndex,
+                label:`Color ${selectedTestColorIndex+1}`,
+                refinementMethod:neutralMethodLabel(method)
             }
-            return;
-        }
-
-        wkTargetL.value=Number(lab[0]).toFixed(2);
-        wkTargetA.value=Number(lab[1]).toFixed(2);
-        wkTargetB.value=Number(lab[2]).toFixed(2);
-
-        if (wkTotalGrams && totalGramsInput && Number(totalGramsInput.value)>0) {
-            wkTotalGrams.value=totalGramsInput.value;
-        }
-
-        if (wkStatus) {
-            wkStatus.classList.remove('is-error');
-            wkStatus.textContent=`${selected.label || 'Selected test color'} loaded from Paint Formulation.`;
-        }
+        }));
     }
 
     function kmeansPlusPlus(points,k) {
@@ -1153,6 +1142,8 @@
         });
         selectedTestColorIndex=null;
         selectedTestColorAt=null;
+        selectedNeutralMethod='baseline';
+        neutralRefinementCache=null;
         lastFormulationRows=rows;
         renderFormulationCards(rows,grams);
         renderTestColorSelectionState();
@@ -1303,7 +1294,10 @@
                 const [r,g,b]=row.rgb;
                 testColorStatusEl.classList.add('has-selection');
                 testColorStatusSwatch.style.background=`rgb(${r},${g},${b})`;
-                testColorStatusLabel.textContent=`Color ${selectedTestColorIndex+1}`;
+                const methodSuffix=selectedNeutralMethod==='baseline'
+                    ? ''
+                    : ` · ${selectedNeutralMethod==='luminance' ? 'Y + W/K' : 'K–M + W/K'}`;
+                testColorStatusLabel.textContent=`Color ${selectedTestColorIndex+1}${methodSuffix}`;
             } else {
                 testColorStatusEl.classList.remove('has-selection');
                 testColorStatusSwatch.style.background='';
@@ -1326,7 +1320,10 @@
 
         selectedTestColorIndex=index;
         selectedTestColorAt=new Date().toISOString();
+        selectedNeutralMethod='baseline';
+        neutralRefinementCache=null;
         renderTestColorSelectionState();
+        calculateNeutralRefinement();
 
         window.dispatchEvent(new CustomEvent('skillosaic:test-color-selected',{
             detail:{index,label:`Color ${index+1}`}
@@ -1344,8 +1341,33 @@
         if (!(grams>0)) return null;
 
         const row=lastFormulationRows[selectedTestColorIndex];
-        const recipe=row.formulation.recipe.map(Number);
-        const amounts=recipe.map(percent=>grams*percent/100);
+        const selectedResult=neutralResultForMethod(selectedNeutralMethod) || {
+            recipe:{
+                red:row.formulation.recipe[0],
+                yellow:row.formulation.recipe[1],
+                blue:row.formulation.recipe[2],
+                white:0,
+                black:0
+            },
+            predictedLab:row.formulation.predictedLab,
+            deltaE:row.formulation.deltaE,
+            source:row.formulation.source,
+            modifierType:'none',
+            modifierPercent:0
+        };
+        const recipe={
+            red:Number(selectedResult.recipe.red || 0),
+            yellow:Number(selectedResult.recipe.yellow || 0),
+            blue:Number(selectedResult.recipe.blue || 0),
+            white:Number(selectedResult.recipe.white || 0),
+            black:Number(selectedResult.recipe.black || 0)
+        };
+        const amounts=Object.fromEntries(
+            Object.entries(recipe).map(([key,percent])=>[
+                key,
+                Number((grams*percent/100).toFixed(4))
+            ])
+        );
 
         return {
             selectedAt:selectedTestColorAt || new Date().toISOString(),
@@ -1359,19 +1381,19 @@
             nixEquivalentLab:row.nixLab.map(Number),
             totalPaintGrams:grams,
             formulation:{
-                recipePercent:{
-                    red:recipe[0],
-                    yellow:recipe[1],
-                    blue:recipe[2]
-                },
-                grams:{
-                    red:Number(amounts[0].toFixed(4)),
-                    yellow:Number(amounts[1].toFixed(4)),
-                    blue:Number(amounts[2].toFixed(4))
-                },
-                predictedLab:row.formulation.predictedLab.map(Number),
-                predictedDeltaE00:Number(row.formulation.deltaE),
-                source:row.formulation.source
+                recipePercent:recipe,
+                grams:amounts,
+                predictedLab:selectedResult.predictedLab.map(Number),
+                predictedDeltaE00:Number(selectedResult.deltaE),
+                source:selectedResult.source,
+                refinementMethod:selectedNeutralMethod,
+                refinementLabel:neutralMethodLabel(selectedNeutralMethod),
+                whiteBlack:{
+                    modifierType:selectedResult.modifierType || 'none',
+                    modifierPercent:Number(selectedResult.modifierPercent || 0),
+                    assumptions:'Virtual L* refinement; a* and b* inherited from R/Y/B prediction',
+                    settings:neutralRefinementCache?.settings || null
+                }
             }
         };
     }
@@ -1686,6 +1708,7 @@
         }
         updateFormulationAmounts(grams);
         renderManualCalculation(grams);
+        renderNeutralRefinement();
     }
 
     function fmtLab(lab) { return `L* ${lab[0].toFixed(2)}, a* ${lab[1].toFixed(2)}, b* ${lab[2].toFixed(2)}`; }
@@ -2062,13 +2085,21 @@
         }
     }
 
-    if (wkRunBtn) {
-        wkRunBtn.addEventListener('click',runWhiteBlackExperiment);
+    if (neutralRefinementResults) {
+        neutralRefinementResults.addEventListener('click',event=>{
+            const button=event.target.closest('[data-neutral-select]');
+            if (!button) return;
+            selectNeutralMethod(button.dataset.neutralSelect);
+        });
     }
 
-    if (wkUseTestColorBtn) {
-        wkUseTestColorBtn.addEventListener('click',useSelectedTestColorInExperiment);
-    }
+    [neutralMaxPercent,neutralWhiteL,neutralBlackL].forEach(control=>{
+        if (!control) return;
+        control.addEventListener('change',()=>{
+            selectedNeutralMethod='baseline';
+            calculateNeutralRefinement();
+        });
+    });
 
     window.SkillosaicPaint=Object.freeze({
         getSubmissionSnapshot:getPaintSubmissionSnapshot,

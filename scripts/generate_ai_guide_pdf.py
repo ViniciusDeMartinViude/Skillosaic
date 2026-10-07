@@ -155,7 +155,7 @@ def footer(canvas, doc):
     canvas.drawCentredString(
         105 * mm,
         7.5 * mm,
-        f"Skillosaic - How Artificial Intelligence Is Used | Page {doc.page}",
+        f"Skillosaic - End-to-End Paint Formulation Guide | Page {doc.page}",
     )
     canvas.restoreState()
 
@@ -165,10 +165,11 @@ def build_story():
         Spacer(1, 16 * mm),
         p("<font color='#D9822B'><b>SKILLOSAIC</b></font>", "GuideSubtitle"),
         Spacer(1, 12 * mm),
-        p("How Artificial Intelligence Is Used", "GuideTitle"),
+        p("End-to-End Paint Formulation", "GuideTitle"),
         p(
-            "Detailed technical guide to K-Means color extraction, camera color correction, "
-            "and Red / Yellow / Blue paint formulation",
+            "Scientific and implementation guide from image capture to CIELAB, K-Means, camera "
+            "correction, R/Y/B prediction, CIEDE2000 search, White/Black lightness refinement, "
+            "weighing and physical verification",
             "GuideSubtitle",
         ),
         Spacer(1, 8 * mm),
@@ -176,23 +177,24 @@ def build_story():
             "Camera / Image",
             "K-Means",
             "Camera Correction",
-            "Paint Model",
-            "Delta E00 Search",
-            "R/Y/B Recipe",
+            "R/Y/B Model",
+            "W/B Refinement",
+            "Physical Test",
         ]),
         Spacer(1, 11 * mm),
         p("<b>AI Engineering - Skills Challenge 2026</b>", "GuideSubtitle"),
         p("Emirates Skills | Browser-based color analysis and formulation", "GuideSubtitle"),
         PageBreak(),
 
-        p("1. What AI means in Skillosaic", "H1x"),
+        p("1. End-to-end formulation architecture", "H1x"),
         p(
             "Skillosaic uses several forms of machine learning and numerical intelligence rather "
             "than one large neural network. The system combines unsupervised clustering, supervised "
             "regression, color science and constrained optimization. Each technique solves a "
             "different part of the physical problem: extracting representative colors from an "
             "image, correcting the webcam measurement so that it behaves more like a calibrated "
-            "Nix reference, and estimating a paint recipe that can reproduce the desired LAB color."
+            "Nix reference, estimating a paint recipe that can reproduce the desired LAB color, "
+            "and optionally refining lightness with White or Black before physical verification."
         ),
         p(
             "The important idea is a chain of models. A camera pixel is not treated as a paint "
@@ -203,11 +205,11 @@ def build_story():
         p("1.1 End-to-end pipeline", "H2x"),
         flow_row([
             "RGB image",
-            "CIELAB",
-            "K-Means",
+            "K-Means LAB",
             "Nix-equivalent LAB",
-            "Forward paint RBF",
-            "Delta E00 optimization",
+            "Forward RBF",
+            "W/B refinement",
+            "Mix & measure",
         ]),
         Spacer(1, 3 * mm),
         kv_table([
@@ -216,7 +218,9 @@ def build_story():
             ("K-Means", "Pixels are grouped into representative color clusters."),
             ("Camera correction", "Camera LAB is transformed toward Nix-equivalent LAB using a learned RBF correction model."),
             ("Paint prediction", "A second RBF predicts the LAB produced by candidate R/Y/B recipes."),
-            ("Inverse search", "CIEDE2000 Delta E00 is minimized to choose the recipe closest to the target."),
+            ("Inverse search", "CIEDE2000 Delta E00 is minimized to choose the R/Y/B recipe closest to the target."),
+            ("White / Black refinement", "Luminance-Y and simplified Kubelka-Munk approximations add an optional independent lightness control."),
+            ("Physical closure", "The selected percentages are converted to grams, mixed, measured with Nix and verified."),
         ]),
         Spacer(1, 3 * mm),
         p("1.2 Why CIELAB is central", "H2x"),
@@ -227,6 +231,21 @@ def build_story():
             "interpret than they would be in raw RGB."
         ),
         p("RGB -> XYZ (D65) -> CIELAB [L*, a*, b*]", "Eqx"),
+        p("1.3 Exact color-conversion equations used by the browser", "H2x"),
+        p(
+            "The image path first removes the sRGB transfer function, then applies the D65 linear-RGB "
+            "to XYZ matrix and finally the CIE 1976 L*a*b* transform."
+        ),
+        p("C = c/255;  C_lin = C/12.92 if C <= 0.04045;  otherwise C_lin = ((C+0.055)/1.055)^2.4", "Eqx"),
+        p("X = 0.4124564R + 0.3575761G + 0.1804375B", "Eqx"),
+        p("Y = 0.2126729R + 0.7151522G + 0.0721750B", "Eqx"),
+        p("Z = 0.0193339R + 0.1191920G + 0.9503041B", "Eqx"),
+        p("L* = 116 f(Y/Yn) - 16;  a* = 500[f(X/Xn)-f(Y/Yn)];  b* = 200[f(Y/Yn)-f(Z/Zn)]", "Eqx"),
+        p(
+            "Skillosaic uses the D65 reference white Xn=95.047, Yn=100.000, Zn=108.883. "
+            "CIELAB is approximately perceptually uniform, so its geometry is more meaningful for "
+            "color clustering and difference calculations than raw device RGB."
+        ),
 
         p("2. K-Means: extracting representative colors", "H1x"),
         p(
@@ -239,6 +258,7 @@ def build_story():
             "K-Means++ selects initial centroids so that new centers are more likely to be far from "
             "centroids already chosen. This reduces poor initial configurations."
         ),
+        p("J = sum_i ||x_i - centroid_c(i)||^2", "Eqx"),
         p("Assign pixel i to cluster c = arg min ||x_i - centroid_c||^2", "Eqx"),
         p("2.2 Mosaic &amp; Contours implementation", "H2x"),
         bullets([
@@ -299,6 +319,13 @@ def build_story():
             "uses smoothing = 5.0."
         ),
         p("phi(r) = r^3", "Eqx"),
+        p("f(x) = sum_i lambda_i phi(||x-x_i||) + beta_0 + beta^T x", "Eqx"),
+        p("(K + lambda_s I)a + P b = d,   with   P^T a = 0", "Eqx"),
+        p(
+            "This is the same mathematical family used by standard RBF interpolation formulations: "
+            "radial terms centered on measured samples plus a low-degree polynomial tail. The "
+            "nonzero smoothing term trades exact interpolation for robustness to measurement noise."
+        ),
         p("3.4 Why fixed camera conditions matter", "H2x"),
         bullets([
             "The learned correction is specific to the physical setup used for calibration.",
@@ -364,6 +391,12 @@ def build_story():
             "than simple Euclidean distance in raw RGB."
         ),
         p("Objective = minimize Delta E00(Target LAB, Predicted LAB(recipe))", "Eqx"),
+        p(
+            "CIEDE2000 corrects the nonuniformity of simple Euclidean distance in CIELAB by weighting "
+            "lightness, chroma and hue and by adding a rotation term that is especially important in "
+            "part of the blue region."
+        ),
+        p("DeltaE00 = sqrt[(dL'/SL)^2 + (dC'/SC)^2 + (dH'/SH)^2 + RT(dC'/SC)(dH'/SH)]", "Eqx"),
         p("5.3 Search strategy implemented in the browser", "H2x"),
         numbered([
             "Compare the target with the 24 measured Nix formulations. If the nearest measured sample is within Delta E00 <= 1.0, reuse it directly.",
@@ -381,12 +414,53 @@ def build_story():
             "is the final validation."
         ),
 
+        p("5.5 White / Black lightness refinement", "H2x"),
+        p(
+            "The baseline model contains only Red, Yellow and Blue. When a target mainly requires a "
+            "change in lightness, the optimizer may increase Yellow because Yellow has a relatively "
+            "high L*. That can improve L* while also shifting chroma and hue. Step 4.5 therefore "
+            "compares two optional White/Black approximations after the R/Y/B search."
+        ),
+        p(
+            "<b>Important scientific limitation:</b> White and Black are not yet part of the measured "
+            "paint-RBF training set. These are hypothesis-driven lightness models used to propose "
+            "physical trials. In both approaches a* and b* remain those predicted by the R/Y/B base.",
+            "Calloutx",
+        ),
+        p("Convert L* to relative luminance Y:", "Smallx"),
+        p("Y = ((L*+16)/116)^3 if L*>8; otherwise Y = L*/903.3", "Eqx"),
+        p("Method A - luminance Y interpolation", "H2x"),
+        p("Y_mix = (1-p)Y_base + pY_modifier", "Eqx"),
+        p("LAB_virtual = [L*(Y_mix), a*_base, b*_base]", "Eqx"),
+        p(
+            "This method interpolates a quantity closer to physical luminance instead of interpolating "
+            "L* directly. The default references are White L*=97.55 and Black L*=22.69."
+        ),
+        p("Method B - simplified scalar Kubelka-Munk", "H2x"),
+        p("K/S = (1-R)^2 / (2R)", "Eqx"),
+        p("(K/S)_mix = (1-p)(K/S)_base + p(K/S)_modifier", "Eqx"),
+        p("R_mix = 1 + K/S - sqrt[(K/S)^2 + 2(K/S)]", "Eqx"),
+        p(
+            "Classical Kubelka-Munk theory is spectral and wavelength-dependent. Skillosaic currently "
+            "uses relative luminance Y as a scalar reflectance surrogate, so this is deliberately a "
+            "simplified experimental approximation rather than a full spectral paint model."
+        ),
+        p("Recipe scaling for either White or Black", "H2x"),
+        p("R_f=(1-p)R;  Y_f=(1-p)Y;  B_f=(1-p)B;  W_f=100p or K_f=100p", "Eqx"),
+        p(
+            "The browser tests White or Black in 5% steps up to a selectable maximum of 40%, 60% or "
+            "80%, compares predicted Delta E00, and lets the operator explicitly choose baseline, "
+            "luminance-Y or simplified Kubelka-Munk before Step 5 Weighing."
+        ),
+
         p("6. How the AI components work together", "H1x"),
         kv_table([
             ("K-Means++", "Unsupervised learning. Reduces an image to representative colors."),
             ("Camera correction RBF", "Supervised regression. Learns Camera LAB to Nix LAB correction."),
             ("Paint formulation RBF", "Supervised regression. Learns R/Y/B recipe to Nix LAB."),
-            ("Delta E00 search", "Constrained optimization. Finds the closest valid predicted recipe."),
+            ("Delta E00 search", "Constrained optimization. Finds the closest valid predicted R/Y/B recipe."),
+            ("Luminance-Y refinement", "Deterministic lightness approximation using relative luminance."),
+            ("Simplified Kubelka-Munk", "Scalar K/S lightness approximation used as an experimental White/Black proposal."),
         ]),
         Spacer(1, 3 * mm),
         p("6.1 Learned versus deterministic steps", "H2x"),
@@ -397,6 +471,7 @@ def build_story():
             ("Paint forward model", "Learned from measured recipes and Nix LAB."),
             ("Delta E00", "Deterministic color-difference formula."),
             ("Recipe search", "Deterministic constrained search using the learned forward model."),
+            ("White/Black refinement", "Deterministic approximation layered on the R/Y/B prediction; not a trained five-pigment model."),
         ]),
 
         p("7. Example reasoning for one representative color", "H1x"),
@@ -408,7 +483,8 @@ def build_story():
             "Use the corrected LAB as the paint target.",
             "Use the paint RBF to predict LAB for candidate R/Y/B recipes.",
             "Use CIEDE2000 to compare each candidate with the target.",
-            "Return the lowest-distance recipe as percentages and grams.",
+            "For the selected test color, compare baseline R/Y/B with both White/Black lightness refinements.",
+            "Select the formulation that should continue to weighing and convert percentages to grams.",
             "Mix the physical paint and measure it.",
             "Enter the measured LAB during Verification to close the loop.",
         ]),
@@ -426,6 +502,7 @@ def build_story():
             "Paint mixing can be affected by pigment batch, substrate, film thickness, drying and measurement conditions.",
             "K-Means can vary slightly because K-Means++ includes random initialization.",
             "The browser inverse is a discrete numerical search, not an analytic inverse.",
+            "The current White/Black methods alter only L* and are not spectral Kubelka-Munk models.",
             "A low predicted Delta E00 does not prove a perfect physical match; the mixed sample must be measured.",
         ]),
         p(
@@ -447,19 +524,45 @@ def build_story():
             ("Measured recipe reuse", "Delta E00 <= 1.0."),
             ("Global search", "1 percentage point."),
             ("Local refinement", "0.25 percentage points around the best global candidate."),
-            ("Paint components", "Red, Yellow and Blue; B = 100 - R - Y."),
+            ("White reference L*", "97.55 default; editable."),
+            ("Black reference L*", "22.69 default; editable."),
+            ("White/Black search", "5% steps; maximum selectable as 40%, 60% or 80%."),
+            ("White/Black chroma assumption", "a* and b* are inherited from the R/Y/B base prediction."),
+            ("Final components", "R/Y/B baseline, optionally rescaled with White or Black."),
         ]),
         Spacer(1, 3 * mm),
 
         p("10. Summary", "H1x"),
         p(
-            "Skillosaic uses AI as a sequence of specialized, interpretable tools. K-Means discovers "
+            "Skillosaic uses a sequence of specialized, interpretable tools. K-Means discovers "
             "representative colors. A camera-correction RBF converts webcam-derived LAB toward the "
             "Nix measurement domain. A paint RBF models how R/Y/B mixtures produce LAB colors. "
-            "CIEDE2000 optimization searches the valid recipe space, and physical Verification closes "
+            "CIEDE2000 searches the valid recipe space. Optional luminance-Y and simplified "
+            "Kubelka-Munk layers add White/Black lightness proposals, and physical Verification closes "
             "the loop between prediction and reality."
         ),
-        flow_row(["Image", "Cluster", "Correct", "Predict", "Optimize", "Mix", "Measure"]),
+        flow_row(["Image", "Cluster", "Correct", "Predict", "Refine W/K", "Mix", "Measure"]),
+
+        PageBreak(),
+        p("11. Scientific references and rationale", "H1x"),
+        p(
+            "The references below support the color-science and numerical methods used or discussed "
+            "in this guide. Skillosaic-specific parameter values are implementation decisions."
+        ),
+        p("1. CIE / ISO. ISO/CIE 11664-4:2019, Colorimetry - Part 4: CIE 1976 L*a*b* colour space.", "Smallx"),
+        p("2. IEC 61966-2-1, default RGB colour space - sRGB.", "Smallx"),
+        p("3. Arthur, D.; Vassilvitskii, S. (2007). k-means++: The Advantages of Careful Seeding. SODA 2007, pp. 1027-1035.", "Smallx"),
+        p("4. Fasshauer, G. E. (2007). Meshfree Approximation Methods with MATLAB. World Scientific. The cubic RBF + polynomial + smoothing system is also documented by SciPy RBFInterpolator.", "Smallx"),
+        p("5. Sharma, G.; Wu, W.; Dalal, E. N. (2005). The CIEDE2000 Color-Difference Formula: Implementation Notes, Supplementary Test Data, and Mathematical Observations. Color Research & Application 30(1):21-30. DOI 10.1002/col.20070.", "Smallx"),
+        p("6. Kubelka, P.; Munk, F. (1931). Ein Beitrag zur Optik der Farbanstriche. Z. Techn. Physik 12, 593-601.", "Smallx"),
+        p("7. Duncan, D. R. (1949). The colour of pigment mixtures. Proceedings of the Physical Society B.", "Smallx"),
+        p(
+            "<b>Interpretation of Kubelka-Munk in Skillosaic.</b> Classical paint color matching uses "
+            "wavelength-dependent absorption K and scattering S. The current implementation uses "
+            "relative luminance as a scalar reflectance surrogate; it keeps the K/S nonlinearity but "
+            "must not be described as a full spectral Kubelka-Munk model.",
+            "Calloutx",
+        ),
     ]
     return story
 
@@ -473,7 +576,7 @@ def generate(output: Path):
         leftMargin=18 * mm,
         topMargin=16 * mm,
         bottomMargin=17 * mm,
-        title="Skillosaic - How Artificial Intelligence Is Used",
+        title="Skillosaic - End-to-End Paint Formulation",
         author="Emirates Skills",
     )
     doc.build(build_story(), onFirstPage=footer, onLaterPages=footer)

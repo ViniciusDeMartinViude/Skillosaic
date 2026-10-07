@@ -59,11 +59,31 @@
     const testColorRedPercentEl = document.getElementById('submission-test-color-red-percent');
     const testColorYellowPercentEl = document.getElementById('submission-test-color-yellow-percent');
     const testColorBluePercentEl = document.getElementById('submission-test-color-blue-percent');
+    const testColorWhitePercentEl = document.getElementById('submission-test-color-white-percent');
+    const testColorBlackPercentEl = document.getElementById('submission-test-color-black-percent');
     const testColorRedGramsEl = document.getElementById('submission-test-color-red-grams');
     const testColorYellowGramsEl = document.getElementById('submission-test-color-yellow-grams');
     const testColorBlueGramsEl = document.getElementById('submission-test-color-blue-grams');
+    const testColorWhiteGramsEl = document.getElementById('submission-test-color-white-grams');
+    const testColorBlackGramsEl = document.getElementById('submission-test-color-black-grams');
     const testColorTotalEl = document.getElementById('submission-test-color-total');
     const testColorSourceEl = document.getElementById('submission-test-color-source');
+
+    const neutralSubmissionStatusEl = document.getElementById('submission-neutral-status');
+    const neutralSubmissionResultEl = document.getElementById('submission-neutral-result');
+    const neutralSubmissionMethodEl = document.getElementById('submission-neutral-method');
+    const neutralSubmissionDeltaEEl = document.getElementById('submission-neutral-deltae');
+    const neutralSubmissionPredictedLabEl = document.getElementById('submission-neutral-predicted-lab');
+    const neutralSubmissionRedPercentEl = document.getElementById('submission-neutral-red-percent');
+    const neutralSubmissionYellowPercentEl = document.getElementById('submission-neutral-yellow-percent');
+    const neutralSubmissionBluePercentEl = document.getElementById('submission-neutral-blue-percent');
+    const neutralSubmissionWhitePercentEl = document.getElementById('submission-neutral-white-percent');
+    const neutralSubmissionBlackPercentEl = document.getElementById('submission-neutral-black-percent');
+    const neutralSubmissionRedGramsEl = document.getElementById('submission-neutral-red-grams');
+    const neutralSubmissionYellowGramsEl = document.getElementById('submission-neutral-yellow-grams');
+    const neutralSubmissionBlueGramsEl = document.getElementById('submission-neutral-blue-grams');
+    const neutralSubmissionWhiteGramsEl = document.getElementById('submission-neutral-white-grams');
+    const neutralSubmissionBlackGramsEl = document.getElementById('submission-neutral-black-grams');
 
     const weighingTargetEl = document.getElementById('submission-weighing-target');
     const weighingTargetSwatchEl = document.getElementById('submission-weighing-target-swatch');
@@ -133,7 +153,9 @@
     const PAINT_META = {
         red: {label:'Red', cssClass:'red'},
         yellow: {label:'Yellow', cssClass:'yellow'},
-        blue: {label:'Blue', cssClass:'blue'}
+        blue: {label:'Blue', cssClass:'blue'},
+        white: {label:'White', cssClass:'white'},
+        black: {label:'Black', cssClass:'black'}
     };
 
     function nowIso() {
@@ -772,11 +794,77 @@
         if (testColorRedPercentEl) testColorRedPercentEl.textContent='—';
         if (testColorYellowPercentEl) testColorYellowPercentEl.textContent='—';
         if (testColorBluePercentEl) testColorBluePercentEl.textContent='—';
+        if (testColorWhitePercentEl) testColorWhitePercentEl.textContent='—';
+        if (testColorBlackPercentEl) testColorBlackPercentEl.textContent='—';
         if (testColorRedGramsEl) testColorRedGramsEl.textContent='—';
         if (testColorYellowGramsEl) testColorYellowGramsEl.textContent='—';
         if (testColorBlueGramsEl) testColorBlueGramsEl.textContent='—';
+        if (testColorWhiteGramsEl) testColorWhiteGramsEl.textContent='—';
+        if (testColorBlackGramsEl) testColorBlackGramsEl.textContent='—';
         if (testColorTotalEl) testColorTotalEl.textContent='—';
         if (testColorSourceEl) testColorSourceEl.textContent='—';
+
+        if (neutralSubmissionResultEl) neutralSubmissionResultEl.hidden=true;
+        if (neutralSubmissionStatusEl) {
+            neutralSubmissionStatusEl.textContent='Capture a test color in Step 4 to review the final formulation.';
+            neutralSubmissionStatusEl.classList.remove('is-success','is-error');
+        }
+    }
+
+    function renderSubmissionNeutralRefinement(snapshot) {
+        if (!snapshot || typeof snapshot!=='object') {
+            if (neutralSubmissionResultEl) neutralSubmissionResultEl.hidden=true;
+            if (neutralSubmissionStatusEl) {
+                neutralSubmissionStatusEl.textContent='Capture a test color in Step 4 to review the final formulation.';
+                neutralSubmissionStatusEl.classList.remove('is-success','is-error');
+            }
+            return;
+        }
+
+        const formulation=snapshot.formulation || {};
+        const percentages=formulation.recipePercent || {};
+        const grams=formulation.grams || {};
+        const method=formulation.refinementLabel || formulation.source || 'Current R/Y/B model';
+
+        if (neutralSubmissionResultEl) neutralSubmissionResultEl.hidden=false;
+        if (neutralSubmissionMethodEl) neutralSubmissionMethodEl.textContent=method;
+        if (neutralSubmissionDeltaEEl) {
+            neutralSubmissionDeltaEEl.textContent=Number(formulation.predictedDeltaE00 || 0).toFixed(2);
+        }
+        if (neutralSubmissionPredictedLabEl) {
+            neutralSubmissionPredictedLabEl.textContent=formatLabValues(formulation.predictedLab);
+        }
+
+        const percentEls={
+            red:neutralSubmissionRedPercentEl,
+            yellow:neutralSubmissionYellowPercentEl,
+            blue:neutralSubmissionBluePercentEl,
+            white:neutralSubmissionWhitePercentEl,
+            black:neutralSubmissionBlackPercentEl
+        };
+        const gramEls={
+            red:neutralSubmissionRedGramsEl,
+            yellow:neutralSubmissionYellowGramsEl,
+            blue:neutralSubmissionBlueGramsEl,
+            white:neutralSubmissionWhiteGramsEl,
+            black:neutralSubmissionBlackGramsEl
+        };
+
+        Object.keys(percentEls).forEach(key=>{
+            if (percentEls[key]) percentEls[key].textContent=`${Number(percentages[key] || 0).toFixed(1)}%`;
+            if (gramEls[key]) gramEls[key].textContent=`${Number(grams[key] || 0).toFixed(2)} g`;
+        });
+
+        if (neutralSubmissionStatusEl) {
+            const modifier=formulation.whiteBlack || {};
+            const modifierText=modifier.modifierType && modifier.modifierType!=='none'
+                ? ` · ${Number(modifier.modifierPercent || 0).toFixed(0)}% ${modifier.modifierType}`
+                : '';
+            neutralSubmissionStatusEl.textContent=
+                `Final formulation ready for Step 5: ${method}${modifierText}.`;
+            neutralSubmissionStatusEl.classList.remove('is-error');
+            neutralSubmissionStatusEl.classList.add('is-success');
+        }
     }
 
     function renderCapturedTestColor(snapshot) {
@@ -820,10 +908,14 @@
         if (testColorRedPercentEl) testColorRedPercentEl.textContent=`${Number(percentages.red || 0).toFixed(1)}%`;
         if (testColorYellowPercentEl) testColorYellowPercentEl.textContent=`${Number(percentages.yellow || 0).toFixed(1)}%`;
         if (testColorBluePercentEl) testColorBluePercentEl.textContent=`${Number(percentages.blue || 0).toFixed(1)}%`;
+        if (testColorWhitePercentEl) testColorWhitePercentEl.textContent=`${Number(percentages.white || 0).toFixed(1)}%`;
+        if (testColorBlackPercentEl) testColorBlackPercentEl.textContent=`${Number(percentages.black || 0).toFixed(1)}%`;
 
         if (testColorRedGramsEl) testColorRedGramsEl.textContent=`${Number(grams.red || 0).toFixed(2)} g`;
         if (testColorYellowGramsEl) testColorYellowGramsEl.textContent=`${Number(grams.yellow || 0).toFixed(2)} g`;
         if (testColorBlueGramsEl) testColorBlueGramsEl.textContent=`${Number(grams.blue || 0).toFixed(2)} g`;
+        if (testColorWhiteGramsEl) testColorWhiteGramsEl.textContent=`${Number(grams.white || 0).toFixed(2)} g`;
+        if (testColorBlackGramsEl) testColorBlackGramsEl.textContent=`${Number(grams.black || 0).toFixed(2)} g`;
 
         if (testColorTotalEl) {
             testColorTotalEl.textContent=`Total paint: ${Number(snapshot.totalPaintGrams || 0).toFixed(0)} g`;
@@ -838,6 +930,8 @@
             testColorCaptureStatusEl.classList.remove('is-error');
             testColorCaptureStatusEl.classList.add('is-success');
         }
+
+        renderSubmissionNeutralRefinement(snapshot);
 
         if (captureTestColorBtn) captureTestColorBtn.textContent='Recapture selected test color';
     }
@@ -900,7 +994,10 @@
             totalPaintGrams:Number(testColor.totalPaintGrams || 0),
             red:Number(recipe.red || 0),
             yellow:Number(recipe.yellow || 0),
-            blue:Number(recipe.blue || 0)
+            blue:Number(recipe.blue || 0),
+            white:Number(recipe.white || 0),
+            black:Number(recipe.black || 0),
+            refinementMethod:String(testColor.formulation?.refinementMethod || 'baseline')
         });
     }
 
@@ -909,13 +1006,24 @@
         const recipe=testColor.formulation.recipePercent || {};
         const grams=testColor.formulation.grams || {};
 
-        return ['red','yellow','blue']
+        const basePaints=['red','yellow','blue']
             .map(key=>({
                 key,
                 label:PAINT_META[key].label,
                 percent:Number(recipe[key] || 0),
                 grams:Number(grams[key] || 0)
             }));
+
+        const neutralPaints=['white','black']
+            .map(key=>({
+                key,
+                label:PAINT_META[key].label,
+                percent:Number(recipe[key] || 0),
+                grams:Number(grams[key] || 0)
+            }))
+            .filter(paint=>paint.percent>0.0001 || paint.grams>0.0001);
+
+        return basePaints.concat(neutralPaints);
     }
 
     function createWeighingState(testColor) {
