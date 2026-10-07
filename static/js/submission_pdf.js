@@ -106,10 +106,14 @@
         const pct = formulation?.recipePercent || {};
         const wt = formulation?.grams || {};
         return [
-            `Red: ${percent(pct.red)} | ${grams(wt.red)}`,
-            `Yellow: ${percent(pct.yellow)} | ${grams(wt.yellow)}`,
-            `Blue: ${percent(pct.blue)} | ${grams(wt.blue)}`
-        ];
+            ['Red', pct.red, wt.red],
+            ['Yellow', pct.yellow, wt.yellow],
+            ['Blue', pct.blue, wt.blue],
+            ['White', pct.white, wt.white],
+            ['Black', pct.black, wt.black]
+        ].map(([name,pctValue,gramValue]) =>
+            `${name}: ${percent(pctValue)} | ${grams(gramValue)}`
+        );
     }
 
     function createWriter(doc) {
@@ -491,11 +495,31 @@
             w.line('Predicted LAB', labText(testColor.formulation?.predictedLab));
             w.line('Predicted Delta E00', number(testColor.formulation?.predictedDeltaE00));
             w.line('Total paint', grams(testColor.totalPaintGrams, 0));
-            recipeLines(testColor.formulation).forEach((text, recipeIndex) => {
-                const names = ['Recipe Red', 'Recipe Yellow', 'Recipe Blue'];
-                w.line(names[recipeIndex], text.split(': ').slice(1).join(': '));
+            recipeLines(testColor.formulation).forEach(text => {
+                const separator=text.indexOf(': ');
+                const name=separator>=0 ? text.slice(0,separator) : 'Paint';
+                const value=separator>=0 ? text.slice(separator+2) : text;
+                w.line(`Recipe ${name}`, value);
             });
             w.line('Model source', testColor.formulation?.source);
+        }
+
+        w.section('4.5 - White / Black Refinement');
+        if (!testColor) {
+            w.paragraph('No final formulation captured.');
+        } else {
+            const formulation=testColor.formulation || {};
+            const whiteBlack=formulation.whiteBlack || {};
+            w.line('Selected method', formulation.refinementLabel || formulation.source || 'Current R/Y/B model');
+            w.line('Refinement code', formulation.refinementMethod || 'baseline');
+            w.line('Virtual modifier', whiteBlack.modifierType || 'none');
+            w.line('Modifier percentage', percent(whiteBlack.modifierPercent));
+            w.line('Predicted LAB after refinement', labText(formulation.predictedLab));
+            w.line('Predicted Delta E00 after refinement', number(formulation.predictedDeltaE00));
+            w.paragraph(
+                whiteBlack.assumptions ||
+                'Baseline R/Y/B formulation; no virtual White / Black modifier selected.'
+            );
         }
 
         const weighing = fields.weighing;
@@ -504,8 +528,9 @@
             w.paragraph('No weighing data captured.');
         } else {
             const paints = weighing.paints || {};
-            ['red', 'yellow', 'blue'].forEach(key => {
-                const paintRow = paints[key] || {};
+            ['red', 'yellow', 'blue', 'white', 'black'].forEach(key => {
+                const paintRow = paints[key];
+                if (!paintRow) return;
                 w.subsection(key.charAt(0).toUpperCase() + key.slice(1));
                 w.line('Can code', paintRow.code);
                 w.line('Recipe percentage', percent(paintRow.recipePercent));
