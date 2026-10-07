@@ -5115,6 +5115,7 @@ footer {
     min-width: 0;
     flex-direction: column;
     padding: 0.78rem;
+    overflow: visible;
     border: 1px solid var(--border);
     border-radius: 11px;
     background: #fbfcfe;
@@ -5236,10 +5237,17 @@ footer {
 .neutral-recipe-paint.black { border-top: 3px solid #30363b; }
 
 .neutral-use-method {
+    display: flex;
+    align-items: center;
+    justify-content: center;
     width: 100%;
-    margin-top: auto;
-    padding-top: 0.5rem;
-    padding-bottom: 0.5rem;
+    min-height: 40px;
+    margin-top: 0.7rem;
+    padding: 0.55rem 0.7rem;
+    line-height: 1.25;
+    white-space: normal;
+    overflow: visible;
+    flex-shrink: 0;
 }
 
 .neutral-use-method.is-selected {
