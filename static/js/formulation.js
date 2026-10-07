@@ -147,6 +147,7 @@
     let selectedTestColorAt = null;
     let selectedNeutralMethod = 'baseline';
     let neutralRefinementCache = null;
+    let neutralCalculationVersion = 0;
     let formulationModalPreviousFocus = null;
     let manualLabModalPreviousFocus = null;
 
@@ -855,6 +856,7 @@
     }
 
     function calculateNeutralRefinement() {
+        const calculationVersion=++neutralCalculationVersion;
         const hasSelection=
             selectedTestColorIndex !== null &&
             lastFormulationRows &&
@@ -878,12 +880,16 @@
         }
 
         window.setTimeout(()=>{
+            if (calculationVersion!==neutralCalculationVersion) return;
+
             const luminance=findVirtualWhiteBlackMix(target,'luminance',{
                 maxPercent,whiteL,blackL
             });
             const km=findVirtualWhiteBlackMix(target,'km',{
                 maxPercent,whiteL,blackL
             });
+
+            if (calculationVersion!==neutralCalculationVersion) return;
 
             neutralRefinementCache={
                 target,
