@@ -4634,7 +4634,7 @@ footer {
 
 .ai-pipeline {
     display: grid;
-    grid-template-columns: repeat(9, auto);
+    grid-template-columns: repeat(13, auto);
     align-items: center;
     justify-content: center;
     gap: 0.55rem;
@@ -4644,7 +4644,7 @@ footer {
 }
 
 .ai-pipeline-step {
-    min-width: 135px;
+    min-width: 112px;
     padding: 0.68rem 0.75rem;
     border: 1px solid var(--border);
     border-radius: 10px;
@@ -4691,7 +4691,7 @@ footer {
 
 .ai-explainer-grid {
     display: grid;
-    grid-template-columns: repeat(3,minmax(0,1fr));
+    grid-template-columns: repeat(2,minmax(0,1fr));
     gap: 1rem;
     padding: 1rem 2rem;
 }
