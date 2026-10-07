@@ -363,10 +363,10 @@
                 <p class="paint-kicker">AI inside Skillosaic</p>
                 <h1>From camera pixels to a physical paint recipe</h1>
                 <p>
-                    Skillosaic combines unsupervised clustering, calibrated regression models and
-                    numerical optimization. The goal is not only to identify representative colors,
-                    but to translate what the camera sees into a LAB target that can be reproduced
-                    with Red, Yellow and Blue paint.
+                    Skillosaic combines color science, unsupervised clustering, calibrated regression
+                    models and numerical optimization. The complete formulation path goes from image
+                    capture to CIELAB, camera correction, R/Y/B prediction, optional White / Black
+                    lightness refinement, weighing and physical verification.
                 </p>
                 <div class="ai-hero-actions">
                     <a
@@ -374,9 +374,13 @@
                         href="static/docs/Skillosaic_AI_Detailed_Guide.pdf"
                         download
                     >
-                        Download detailed PDF guide
+                        Download detailed formulation PDF
                     </a>
-                    <span>Detailed technical explanation of the complete AI pipeline.</span>
+                    <span>
+                        Scientific end-to-end guide with equations for sRGB → XYZ → CIELAB,
+                        K-Means++, cubic RBF models, CIEDE2000, luminance-Y and simplified
+                        Kubelka–Munk White / Black refinement.
+                    </span>
                 </div>
             </div>
             <div class="ai-local-badge">
@@ -389,12 +393,12 @@
             <div class="ai-pipeline-step">
                 <span class="ai-step-number">1</span>
                 <strong>Camera / Image</strong>
-                <small>RGB pixels</small>
+                <small>sRGB pixels</small>
             </div>
             <span class="ai-pipeline-arrow" aria-hidden="true">→</span>
             <div class="ai-pipeline-step">
                 <span class="ai-step-number">2</span>
-                <strong>K-Means</strong>
+                <strong>CIELAB + K-Means</strong>
                 <small>Representative colors</small>
             </div>
             <span class="ai-pipeline-arrow" aria-hidden="true">→</span>
@@ -406,14 +410,26 @@
             <span class="ai-pipeline-arrow" aria-hidden="true">→</span>
             <div class="ai-pipeline-step">
                 <span class="ai-step-number">4</span>
-                <strong>Paint model</strong>
-                <small>Predicted LAB</small>
+                <strong>R/Y/B forward RBF</strong>
+                <small>Recipe → predicted LAB</small>
             </div>
             <span class="ai-pipeline-arrow" aria-hidden="true">→</span>
             <div class="ai-pipeline-step">
                 <span class="ai-step-number">5</span>
-                <strong>ΔE00 search</strong>
-                <small>R / Y / B recipe</small>
+                <strong>CIEDE2000 search</strong>
+                <small>Best R/Y/B recipe</small>
+            </div>
+            <span class="ai-pipeline-arrow" aria-hidden="true">→</span>
+            <div class="ai-pipeline-step">
+                <span class="ai-step-number">6</span>
+                <strong>White / Black</strong>
+                <small>Luminance Y or K–M</small>
+            </div>
+            <span class="ai-pipeline-arrow" aria-hidden="true">→</span>
+            <div class="ai-pipeline-step">
+                <span class="ai-step-number">7</span>
+                <strong>Mix &amp; verify</strong>
+                <small>Grams + Nix measurement</small>
             </div>
         </section>
 
@@ -516,7 +532,8 @@
 
                 <p>
                     The paint model learns the relationship between known Red / Yellow / Blue mixtures
-                    and the LAB values physically measured with the Nix device.
+                    and the LAB values physically measured with the Nix device. The inverse recipe is
+                    then obtained by searching the forward model with CIEDE2000.
                 </p>
 
                 <div class="ai-model-flow">
@@ -562,15 +579,65 @@
                     Best recipe = arg min ΔE00(Target LAB, Predicted LAB(recipe))
                 </div>
             </article>
+
+            <article class="ai-explainer-card">
+                <div class="ai-card-header">
+                    <span class="ai-card-index">04</span>
+                    <div>
+                        <span class="panel-label">Lightness refinement + physics-inspired model</span>
+                        <h2>White / Black formulation refinement</h2>
+                    </div>
+                </div>
+
+                <p>
+                    Step 4½ compares the R/Y/B baseline with two White / Black lightness
+                    approximations. This creates a more independent control of L* and reduces
+                    the need to use Yellow only to make a target lighter.
+                </p>
+
+                <div class="ai-detail-block">
+                    <h3>Luminance Y interpolation</h3>
+                    <p>
+                        L* is converted back to relative luminance Y, White or Black is mixed
+                        in Y space, and the result is converted back to L*.
+                    </p>
+                    <div class="ai-equation">
+                        Ymix = (1 − p)Ybase + pYmodifier
+                    </div>
+                </div>
+
+                <div class="ai-detail-block">
+                    <h3>Simplified Kubelka–Munk</h3>
+                    <p>
+                        Relative luminance is used as a scalar reflectance approximation,
+                        transformed with the K/S relation, mixed, and converted back to L*.
+                    </p>
+                    <div class="ai-equation">
+                        K/S = (1 − R)² / (2R)
+                    </div>
+                </div>
+
+                <ul class="ai-feature-list">
+                    <li>White L* reference defaults to 97.55; Black defaults to 22.69.</li>
+                    <li>White / Black is searched in 5% steps up to 40%, 60% or 80%.</li>
+                    <li>a* and b* remain inherited from the underlying R/Y/B prediction.</li>
+                    <li>The operator chooses which recipe continues to Step 5 Weighing.</li>
+                </ul>
+
+                <p class="ai-note">
+                    These are experimental approximations, not a measured five-pigment RBF or a full spectral Kubelka–Munk model.
+                </p>
+            </article>
         </section>
 
         <section class="ai-summary-section">
             <div class="ai-summary-copy">
                 <span class="panel-label">What is AI here?</span>
-                <h2>Three different kinds of intelligence work together</h2>
+                <h2>Learned models, color science and physical validation work together</h2>
                 <p>
-                    Skillosaic does not use a large neural network. It combines interpretable
-                    machine-learning methods with color science and constrained numerical search.
+                    Skillosaic does not rely on a single black-box model. It combines deterministic
+                    colorimetry, K-Means++, cubic RBF regression, CIEDE2000 optimization and
+                    physics-inspired White / Black lightness approximations.
                 </p>
             </div>
 
@@ -598,7 +665,17 @@
                 <div class="ai-summary-row" role="row">
                     <strong role="cell">Recipe selection</strong>
                     <span role="cell">ΔE00 optimization</span>
-                    <span role="cell">Choose the predicted mixture closest to the target color.</span>
+                    <span role="cell">Choose the predicted R/Y/B mixture closest to the target color.</span>
+                </div>
+                <div class="ai-summary-row" role="row">
+                    <strong role="cell">Lightness refinement</strong>
+                    <span role="cell">Luminance Y + simplified K–M</span>
+                    <span role="cell">Test White / Black control of L* before weighing.</span>
+                </div>
+                <div class="ai-summary-row" role="row">
+                    <strong role="cell">Physical validation</strong>
+                    <span role="cell">Nix + CIEDE2000</span>
+                    <span role="cell">Measure the real mixture and close the prediction loop.</span>
                 </div>
             </div>
         </section>
