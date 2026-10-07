@@ -5379,3 +5379,115 @@ footer {
         grid-template-columns: 1fr;
     }
 }
+
+
+/* -------------------------------------------------------------------------- */
+/* Paint Formulation: vertical-flow layout safety                              */
+/* -------------------------------------------------------------------------- */
+
+/*
+ * The formulation screen used to force the desktop view into a fixed grid that
+ * attempted to fit every section inside the viewport. On short browser windows
+ * this could collapse the Camera & Image Controls row and make it overlap the
+ * camera / K-Means / Manual LAB workspace. Keep the compact styling, but let
+ * the page grow naturally and use the panel's own vertical scrollbar.
+ */
+#paint-app.paint-app {
+    display: block;
+    min-height: 0;
+    overflow-y: auto;
+    overflow-x: hidden;
+    scrollbar-gutter: stable;
+}
+
+#paint-app .paint-hero,
+#paint-app .paint-controls,
+#paint-app .camera-controls-card,
+#paint-app .paint-main-row,
+#paint-app .paint-palette-section,
+#paint-app .paint-neutral-refinement {
+    position: relative;
+    height: auto;
+    min-height: 0;
+    flex: none;
+}
+
+#paint-app .camera-controls-card {
+    overflow: visible;
+}
+
+@media (min-width: 1400px) {
+    #paint-app .paint-main-row.paint-main-three-columns {
+        display: grid;
+        grid-template-columns: minmax(0, 2fr) minmax(0, 2fr) minmax(285px, 1fr);
+        gap: 0.65rem;
+        padding: 0.55rem 2rem 0;
+        overflow: visible;
+        min-height: 0;
+        height: auto;
+    }
+
+    #paint-app .paint-main-three-columns > .paint-card,
+    #paint-app .paint-main-three-columns > .manual-lab-card {
+        min-width: 0;
+        min-height: 0;
+        height: auto;
+    }
+
+    #paint-app .paint-main-three-columns > .paint-card {
+        overflow: visible;
+    }
+
+    #paint-app .paint-main-three-columns .paint-media-frame {
+        flex: none;
+        width: 100%;
+        height: clamp(260px, 31vh, 360px);
+        min-height: 260px;
+    }
+
+    #paint-app .manual-lab-column {
+        overflow: visible;
+        height: auto;
+    }
+
+    #paint-app .manual-result-structured {
+        flex: none;
+        min-height: 96px;
+        max-height: none;
+        overflow: visible;
+    }
+
+    #paint-app .paint-palette-section {
+        display: block;
+        overflow: visible;
+        margin-top: 0.75rem;
+        min-height: 0;
+    }
+
+    #paint-app .paint-palette-cards {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        grid-template-rows: none;
+        grid-auto-rows: max-content;
+        align-content: start;
+        overflow: visible;
+        min-height: 0;
+        padding-right: 0;
+    }
+
+    #paint-app .paint-color-card {
+        height: auto;
+        min-height: 198px;
+        overflow: visible;
+    }
+
+    #paint-app .paint-neutral-refinement {
+        margin-top: 0.75rem;
+    }
+}
+
+@media (max-width: 1399px) {
+    #paint-app .paint-main-row.paint-main-three-columns {
+        overflow: visible;
+    }
+}
