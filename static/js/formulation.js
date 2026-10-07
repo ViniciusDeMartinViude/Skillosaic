@@ -4,20 +4,17 @@
     const tabMosaic = document.getElementById('tab-mosaic');
     const tabFormulation = document.getElementById('tab-formulation');
     const tabAi = document.getElementById('tab-ai');
-    const tabWk = document.getElementById('tab-wk');
     const mosaicApp = document.getElementById('mosaic-app');
     const paintApp = document.getElementById('paint-app');
     const aiApp = document.getElementById('ai-app');
-    const wkApp = document.getElementById('wk-app');
     const submissionFab = document.getElementById('submission-fab');
 
     function setTab(name) {
-        const activeName = ['mosaic','paint','ai','wk'].includes(name) ? name : 'mosaic';
+        const activeName = ['mosaic','paint','ai'].includes(name) ? name : 'mosaic';
         const entries = [
             {name:'mosaic',tab:tabMosaic,panel:mosaicApp},
             {name:'paint',tab:tabFormulation,panel:paintApp},
-            {name:'ai',tab:tabAi,panel:aiApp},
-            {name:'wk',tab:tabWk,panel:wkApp}
+            {name:'ai',tab:tabAi,panel:aiApp}
         ];
 
         entries.forEach(entry => {
@@ -30,7 +27,7 @@
         });
 
         if (submissionFab) {
-            submissionFab.hidden = activeName === 'ai' || activeName === 'wk';
+            submissionFab.hidden = activeName === 'ai';
         }
 
         if (activeName === 'paint') {
@@ -41,7 +38,6 @@
     tabMosaic.addEventListener('click', () => setTab('mosaic'));
     tabFormulation.addEventListener('click', () => setTab('paint'));
     if (tabAi) tabAi.addEventListener('click', () => setTab('ai'));
-    if (tabWk) tabWk.addEventListener('click', () => setTab('wk'));
 
     const video = document.getElementById('paint-video');
     const sourceCanvas = document.getElementById('paint-source-canvas');
@@ -80,6 +76,12 @@
     const wkUseTestColorBtn = document.getElementById('wk-use-test-color');
     const wkStatus = document.getElementById('wk-status');
     const wkResults = document.getElementById('wk-results');
+
+    const neutralRefinementStatus = document.getElementById('neutral-refinement-status');
+    const neutralRefinementResults = document.getElementById('neutral-refinement-results');
+    const neutralMaxPercent = document.getElementById('neutral-max-percent');
+    const neutralWhiteL = document.getElementById('neutral-white-L');
+    const neutralBlackL = document.getElementById('neutral-black-L');
 
     const manualLabModalOverlay = document.getElementById('manual-lab-modal-overlay');
     const manualLabModalClose = document.getElementById('manual-lab-modal-close');
@@ -143,6 +145,8 @@
     let selectedFormulationIndex = null;
     let selectedTestColorIndex = null;
     let selectedTestColorAt = null;
+    let selectedNeutralMethod = 'baseline';
+    let neutralRefinementCache = null;
     let formulationModalPreviousFocus = null;
     let manualLabModalPreviousFocus = null;
 
@@ -714,6 +718,200 @@
         }
     }
 
+    function neutralMethodLabel(method) {
+        if (method==='luminance') return 'Luminance Y interpolation';
+        if (method==='km') return 'Simplified Kubelka–Munk';
+        return 'Current R/Y/B model';
+    }
+
+    function neutralResultForMethod(method) {
+        if (!neutralRefinementCache) return null;
+        if (method==='luminance') return neutralRefinementCache.luminance?.best || null;
+        if (method==='km') return neutralRefinementCache.km?.best || null;
+
+        const baseline=neutralRefinementCache.baseline;
+        if (!baseline) return null;
+        return {
+            modifierType:'none',
+            modifierPercent:0,
+            baseRecipe:baseline.recipe.slice(),
+            recipe:{
+                red:baseline.recipe[0],
+                yellow:baseline.recipe[1],
+                blue:baseline.recipe[2],
+                white:0,
+                black:0
+            },
+            predictedLab:baseline.predictedLab.slice(),
+            deltaE:baseline.deltaE,
+            source:baseline.source
+        };
+    }
+
+    function neutralRecipeRows(recipe,totalGrams) {
+        const meta=[
+            ['red','Red'],
+            ['yellow','Yellow'],
+            ['blue','Blue'],
+            ['white','White'],
+            ['black','Black']
+        ];
+        return meta.map(([key,label])=>{
+            const percent=Number(recipe?.[key] || 0);
+            const grams=totalGrams*percent/100;
+            return `
+                <div class="neutral-recipe-paint ${key}">
+                    <span>${label}</span>
+                    <strong>${percent.toFixed(2)}%</strong>
+                    <b>${grams.toFixed(2)} g</b>
+                </div>
+            `;
+        }).join('');
+    }
+
+    function neutralResultCard(method,result,totalGrams,target) {
+        const selected=selectedNeutralMethod===method;
+        const methodLabel=neutralMethodLabel(method);
+        const baselineDelta=Number(neutralRefinementCache?.baseline?.deltaE ?? result.deltaE);
+        const improvement=baselineDelta-Number(result.deltaE);
+        const modifier=result.modifierType==='none'
+            ? 'No White / Black'
+            : `${Number(result.modifierPercent).toFixed(0)}% ${result.modifierType==='white' ? 'White' : 'Black'}`;
+        const actionLabel=method==='baseline'
+            ? 'Keep current R/Y/B'
+            : `Use ${methodLabel}`;
+
+        return `
+            <article class="neutral-method-card ${selected ? 'is-selected' : ''}" data-neutral-method="${method}">
+                <div class="neutral-method-card-header">
+                    <div>
+                        <span class="panel-label">${method==='baseline' ? 'Baseline' : 'White / Black model'}</span>
+                        <h3>${methodLabel}</h3>
+                    </div>
+                    <div class="neutral-method-delta">
+                        <small>Predicted ΔE00</small>
+                        <strong>${Number(result.deltaE).toFixed(2)}</strong>
+                    </div>
+                </div>
+
+                <div class="neutral-method-metrics">
+                    <div><span>Target LAB</span><strong>${wkFormatLab(target)}</strong></div>
+                    <div><span>Predicted LAB</span><strong>${wkFormatLab(result.predictedLab)}</strong></div>
+                    <div><span>White / Black</span><strong>${modifier}</strong></div>
+                    <div><span>ΔE00 improvement</span><strong>${improvement.toFixed(2)}</strong></div>
+                </div>
+
+                <div class="neutral-recipe-grid">
+                    ${neutralRecipeRows(result.recipe,totalGrams)}
+                </div>
+
+                <button
+                    class="btn-action neutral-use-method ${selected ? 'is-selected' : ''}"
+                    type="button"
+                    data-neutral-select="${method}"
+                    aria-pressed="${selected ? 'true' : 'false'}"
+                >
+                    ${selected ? 'Selected for Step 5' : actionLabel}
+                </button>
+            </article>
+        `;
+    }
+
+    function renderNeutralRefinement() {
+        if (!neutralRefinementResults || !neutralRefinementStatus) return;
+
+        const hasSelection=
+            selectedTestColorIndex !== null &&
+            lastFormulationRows &&
+            lastFormulationRows[selectedTestColorIndex];
+
+        if (!hasSelection || !neutralRefinementCache) {
+            neutralRefinementStatus.textContent='Select a test color above.';
+            neutralRefinementStatus.classList.remove('has-selection');
+            neutralRefinementResults.innerHTML=`
+                <div class="neutral-refinement-empty">
+                    Select one formulation card as the test color to compare the three recipes.
+                </div>
+            `;
+            return;
+        }
+
+        const row=lastFormulationRows[selectedTestColorIndex];
+        const totalGrams=Number(totalGramsInput.value);
+        const target=row.nixLab;
+        const baseline=neutralResultForMethod('baseline');
+        const luminance=neutralResultForMethod('luminance');
+        const km=neutralResultForMethod('km');
+
+        neutralRefinementStatus.classList.add('has-selection');
+        neutralRefinementStatus.textContent=
+            `Color ${selectedTestColorIndex+1} · ${neutralMethodLabel(selectedNeutralMethod)} selected for Step 5`;
+
+        neutralRefinementResults.innerHTML=[
+            neutralResultCard('baseline',baseline,totalGrams,target),
+            neutralResultCard('luminance',luminance,totalGrams,target),
+            neutralResultCard('km',km,totalGrams,target)
+        ].join('');
+    }
+
+    function calculateNeutralRefinement() {
+        const hasSelection=
+            selectedTestColorIndex !== null &&
+            lastFormulationRows &&
+            lastFormulationRows[selectedTestColorIndex];
+
+        if (!hasSelection) {
+            neutralRefinementCache=null;
+            renderNeutralRefinement();
+            return;
+        }
+
+        const row=lastFormulationRows[selectedTestColorIndex];
+        const target=row.nixLab.map(Number);
+        const maxPercent=Number(neutralMaxPercent?.value || 60);
+        const whiteL=Number(neutralWhiteL?.value || 97.55);
+        const blackL=Number(neutralBlackL?.value || 22.69);
+
+        if (neutralRefinementStatus) {
+            neutralRefinementStatus.textContent='Calculating White / Black refinements...';
+            neutralRefinementStatus.classList.add('has-selection');
+        }
+
+        window.setTimeout(()=>{
+            const luminance=findVirtualWhiteBlackMix(target,'luminance',{
+                maxPercent,whiteL,blackL
+            });
+            const km=findVirtualWhiteBlackMix(target,'km',{
+                maxPercent,whiteL,blackL
+            });
+
+            neutralRefinementCache={
+                target,
+                baseline:row.formulation,
+                luminance,
+                km,
+                settings:{maxPercent,whiteL,blackL,stepPercent:5}
+            };
+            renderNeutralRefinement();
+        },0);
+    }
+
+    function selectNeutralMethod(method) {
+        if (!['baseline','luminance','km'].includes(method) || !neutralRefinementCache) return;
+        selectedNeutralMethod=method;
+        selectedTestColorAt=new Date().toISOString();
+        renderNeutralRefinement();
+        renderTestColorSelectionState();
+
+        window.dispatchEvent(new CustomEvent('skillosaic:test-color-selected',{
+            detail:{
+                index:selectedTestColorIndex,
+                label:`Color ${selectedTestColorIndex+1}`,
+                refinementMethod:neutralMethodLabel(method)
+            }
+        }));
+    }
+
     function kmeansPlusPlus(points,k) {
         const centroids=[points[Math.floor(Math.random()*points.length)].slice()];
         while (centroids.length<k) {
@@ -1153,6 +1351,8 @@
         });
         selectedTestColorIndex=null;
         selectedTestColorAt=null;
+        selectedNeutralMethod='baseline';
+        neutralRefinementCache=null;
         lastFormulationRows=rows;
         renderFormulationCards(rows,grams);
         renderTestColorSelectionState();
@@ -1303,7 +1503,10 @@
                 const [r,g,b]=row.rgb;
                 testColorStatusEl.classList.add('has-selection');
                 testColorStatusSwatch.style.background=`rgb(${r},${g},${b})`;
-                testColorStatusLabel.textContent=`Color ${selectedTestColorIndex+1}`;
+                const methodSuffix=selectedNeutralMethod==='baseline'
+                    ? ''
+                    : ` · ${selectedNeutralMethod==='luminance' ? 'Y + W/K' : 'K–M + W/K'}`;
+                testColorStatusLabel.textContent=`Color ${selectedTestColorIndex+1}${methodSuffix}`;
             } else {
                 testColorStatusEl.classList.remove('has-selection');
                 testColorStatusSwatch.style.background='';
@@ -1326,7 +1529,10 @@
 
         selectedTestColorIndex=index;
         selectedTestColorAt=new Date().toISOString();
+        selectedNeutralMethod='baseline';
+        neutralRefinementCache=null;
         renderTestColorSelectionState();
+        calculateNeutralRefinement();
 
         window.dispatchEvent(new CustomEvent('skillosaic:test-color-selected',{
             detail:{index,label:`Color ${index+1}`}
@@ -1344,8 +1550,33 @@
         if (!(grams>0)) return null;
 
         const row=lastFormulationRows[selectedTestColorIndex];
-        const recipe=row.formulation.recipe.map(Number);
-        const amounts=recipe.map(percent=>grams*percent/100);
+        const selectedResult=neutralResultForMethod(selectedNeutralMethod) || {
+            recipe:{
+                red:row.formulation.recipe[0],
+                yellow:row.formulation.recipe[1],
+                blue:row.formulation.recipe[2],
+                white:0,
+                black:0
+            },
+            predictedLab:row.formulation.predictedLab,
+            deltaE:row.formulation.deltaE,
+            source:row.formulation.source,
+            modifierType:'none',
+            modifierPercent:0
+        };
+        const recipe={
+            red:Number(selectedResult.recipe.red || 0),
+            yellow:Number(selectedResult.recipe.yellow || 0),
+            blue:Number(selectedResult.recipe.blue || 0),
+            white:Number(selectedResult.recipe.white || 0),
+            black:Number(selectedResult.recipe.black || 0)
+        };
+        const amounts=Object.fromEntries(
+            Object.entries(recipe).map(([key,percent])=>[
+                key,
+                Number((grams*percent/100).toFixed(4))
+            ])
+        );
 
         return {
             selectedAt:selectedTestColorAt || new Date().toISOString(),
@@ -1359,19 +1590,19 @@
             nixEquivalentLab:row.nixLab.map(Number),
             totalPaintGrams:grams,
             formulation:{
-                recipePercent:{
-                    red:recipe[0],
-                    yellow:recipe[1],
-                    blue:recipe[2]
-                },
-                grams:{
-                    red:Number(amounts[0].toFixed(4)),
-                    yellow:Number(amounts[1].toFixed(4)),
-                    blue:Number(amounts[2].toFixed(4))
-                },
-                predictedLab:row.formulation.predictedLab.map(Number),
-                predictedDeltaE00:Number(row.formulation.deltaE),
-                source:row.formulation.source
+                recipePercent:recipe,
+                grams:amounts,
+                predictedLab:selectedResult.predictedLab.map(Number),
+                predictedDeltaE00:Number(selectedResult.deltaE),
+                source:selectedResult.source,
+                refinementMethod:selectedNeutralMethod,
+                refinementLabel:neutralMethodLabel(selectedNeutralMethod),
+                whiteBlack:{
+                    modifierType:selectedResult.modifierType || 'none',
+                    modifierPercent:Number(selectedResult.modifierPercent || 0),
+                    assumptions:'Virtual L* refinement; a* and b* inherited from R/Y/B prediction',
+                    settings:neutralRefinementCache?.settings || null
+                }
             }
         };
     }
@@ -1686,6 +1917,7 @@
         }
         updateFormulationAmounts(grams);
         renderManualCalculation(grams);
+        renderNeutralRefinement();
     }
 
     function fmtLab(lab) { return `L* ${lab[0].toFixed(2)}, a* ${lab[1].toFixed(2)}, b* ${lab[2].toFixed(2)}`; }
@@ -2061,6 +2293,22 @@
             statusEl.textContent='Camera released for submission photo';
         }
     }
+
+    if (neutralRefinementResults) {
+        neutralRefinementResults.addEventListener('click',event=>{
+            const button=event.target.closest('[data-neutral-select]');
+            if (!button) return;
+            selectNeutralMethod(button.dataset.neutralSelect);
+        });
+    }
+
+    [neutralMaxPercent,neutralWhiteL,neutralBlackL].forEach(control=>{
+        if (!control) return;
+        control.addEventListener('change',()=>{
+            selectedNeutralMethod='baseline';
+            calculateNeutralRefinement();
+        });
+    });
 
     if (wkRunBtn) {
         wkRunBtn.addEventListener('click',runWhiteBlackExperiment);
