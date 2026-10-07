@@ -418,7 +418,7 @@ def build_story():
         p(
             "The baseline model contains only Red, Yellow and Blue. When a target mainly requires a "
             "change in lightness, the optimizer may increase Yellow because Yellow has a relatively "
-            "high L*. That can improve L* while also shifting chroma and hue. Step 4½ therefore "
+            "high L*. That can improve L* while also shifting chroma and hue. Step 4.5 therefore "
             "compares two optional White/Black approximations after the R/Y/B search."
         ),
         p(
